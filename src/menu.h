@@ -12,7 +12,9 @@
 #ifndef WX_PRECOMP
 #include "wx/wx.h"
 #endif
-#include "wx/file.h"
+
+#include "canvas.h"		// for SimpleCanvas
+#include "project.h"	// for SimpleProject
 
 class SimpleMenu : public wxFrame
 {
@@ -31,19 +33,15 @@ public:
 	void OnQuit(wxCommandEvent& event);
 
 private:
-	// current project directory
-	wxString currFileDir{ "" };
-	// current project filename
-	wxString currFileName{ "" };
-	// full path
-	wxString projectPath{ "" };
+	// project
+	SimpleProject project;
 
 	// project name indicator text controls
 	wxStaticText* stFileDir{ nullptr };
 	wxStaticText* stFileName{ nullptr };
 
-	// project file
-	wxFile projectFile;
+	// SimpleCanvas instance
+	SimpleCanvas* canvas{ nullptr };
 
 	// event table declaration
 	wxDECLARE_EVENT_TABLE();

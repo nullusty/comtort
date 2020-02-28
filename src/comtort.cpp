@@ -15,6 +15,7 @@
 // comtort header files
 #include "comtort.h"	// for ComtortApp
 #include "menu.h"		// for SimpleMenu
+#include "project.h"	// for SimpleProject
 
 // create platform-dependent main() or WinMain()
 // entry points that implement MyApp

@@ -5,7 +5,6 @@
 // via wxBEGIN_EVENT_TABLE/wxEND_EVENT_TABLE
 
 #include "menu.h"
-#include "wx/wfstream.h"
 
 // SimpleMenu constructor
 SimpleMenu::SimpleMenu(const wxString& title)
@@ -31,17 +30,25 @@ SimpleMenu::SimpleMenu(const wxString& title)
 	// set menubar
 	SetMenuBar(menubar);
 
-	// project info panel
+	// user view panel
+	auto userPanel = new wxPanel(this, -1);
+	//  sizer (vertical columns)
 	auto vbox = new wxBoxSizer(wxVERTICAL);
-	auto infoPanel = new wxPanel(this, -1);
-	stFileName = new wxStaticText(infoPanel, -1, wxT("project name:"));
-	stFileDir = new wxStaticText(infoPanel, -1, wxT("project dir:"));
+	//  static text indicators of current project
+	stFileName = new wxStaticText(userPanel, -1, wxT("project name:"));
+	stFileDir = new wxStaticText(userPanel, -1, wxT("project dir:"));
 	//  add text controls to vbox
 	vbox->Add(stFileName, 0, 0, 0);
 	vbox->Add(stFileDir, 0, 0, 0);
-	vbox->SetSizeHints(infoPanel);
-	//  set infopanel's sizer
-	infoPanel->SetSizer(vbox);
+	//  create canvas
+	canvas = new SimpleCanvas((wxFrame*)userPanel);
+	//  bind event from canvas?
+	//  add canvas to vbox
+	vbox->Add(canvas, 0, 0, 0);
+	//  set wsizer hints
+	vbox->SetSizeHints(userPanel);
+	//  set sizer
+	userPanel->SetSizer(vbox);
 
 	// Center frame in display
 	Centre();
@@ -52,41 +59,45 @@ SimpleMenu::SimpleMenu(const wxString& title)
 void SimpleMenu::OnNew(wxCommandEvent& WXUNUSED(event)) 
 {
 	// save current filename (in case user changes idea)
-	auto tempFileName = currFileName;
+	auto tempFileName = project.GetName();
 
 	// get new project name
-	wxTextEntryDialog nameDialog(this, "project name", "", "", wxOK);
-	if (nameDialog.ShowModal() == wxID_OK)
+	auto nameDialog = new wxTextEntryDialog(this, "project name", "", "", wxOK);
+	if (nameDialog->ShowModal() == wxID_OK)
 	{
-		currFileName = nameDialog.GetValue() + wxT(".tort");
+		project.SetName(nameDialog->GetValue());
 	}
 	// user changed idea
 	else {
+		nameDialog->Destroy();
 		return;
 	}
+	nameDialog->Destroy();
 
 	// get containing directory
-	wxDirDialog dirDialog(this, "project location", "");
-	if (dirDialog.ShowModal() == wxID_OK)
+	auto dirDialog = new wxDirDialog(this, "project location", "");
+	if (dirDialog->ShowModal() == wxID_OK)
 	{
-		currFileDir = dirDialog.GetPath();
+		project.SetDirectory(dirDialog->GetPath());
 	}
 	// user changed idea
 	else {
 		// reset original filename
-		currFileName = tempFileName;
+		project.SetName(tempFileName);
+		dirDialog->Destroy();
+		return;
+	}
+	dirDialog->Destroy();
+
+	// save empty project
+	if (!project.Create()) {
+		wxLogError("Cannot save file '%s'.", project.GetPath());
 		return;
 	}
 
-	// set full project path
-	projectPath = currFileDir + wxT("\\") + currFileName;
-
 	// update static text
-	stFileName->SetLabel(wxString("project name: ") + currFileName);
-	stFileDir->SetLabel(wxString("project location: ") + currFileDir);
-
-	// create project file
-	projectFile.Create(projectPath);
+	stFileName->SetLabel(wxString("project name: ") + project.GetName());
+	stFileDir->SetLabel(wxString("project location: ") + project.GetDirectory());
 }
 //  open project
 void SimpleMenu::OnOpen(wxCommandEvent& WXUNUSED(event)) 
@@ -99,35 +110,29 @@ void SimpleMenu::OnOpen(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	// load project file chosen by user
-	wxFileInputStream inputStream(fileDialog.GetPath());
-	if (!inputStream.IsOk()) {
+	// set project name and containing directory
+	auto projectPath = fileDialog.GetPath();
+	project.SetName(projectPath.AfterLast(wxS('\\')).BeforeFirst(wxS('.')));
+	project.SetDirectory(projectPath.BeforeLast(wxS('\\')));
+
+	// load project
+	if (!project.Load()) {
 		wxLogError("Cannot open file '%s'.", fileDialog.GetPath());
 		return;
 	}
 
-	// set current project strings
-	projectPath = fileDialog.GetPath();
-	currFileName = projectPath.AfterLast(wxS('\\'));
-	currFileDir = projectPath.BeforeLast(wxS('\\'));
-
 	// update static text
-	stFileName->SetLabel(wxString("project name: ") + currFileName);
-	stFileDir->SetLabel(wxString("project location: ") + currFileDir);
-
-	// TODO: implement load project
+	stFileName->SetLabel(wxString("project name: ") + project.GetName());
+	stFileDir->SetLabel(wxString("project location: ") + project.GetDirectory());
 }
 //  save project
 void SimpleMenu::OnSave(wxCommandEvent& WXUNUSED(event)) 
 {
 	// save project file
-	wxFileInputStream outputStream(projectPath);
-	if (!outputStream.IsOk()) {
-		wxLogError("Cannot save project in file '%s'.", projectPath);
+	if (!project.Save()) {
+		wxLogError("Cannot save file '%s'.", project.GetPath());
 		return;
 	}
-
-	// TODO: implement save project
 }
 //  quit application
 void SimpleMenu::OnQuit(wxCommandEvent& WXUNUSED(event))
