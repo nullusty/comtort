@@ -33,15 +33,24 @@ public:
 	void OnQuit(wxCommandEvent& event);
 
 private:
-	// project
+	// SimpleProject (MODEL)
 	SimpleProject project;
+
+	// User Panel
+	wxPanel* userPanel{ nullptr };
+
+	// Tool Panel
+	wxPanel* toolPanel{ nullptr };
+	//  buttons
+	wxButton* editNodesButton{ nullptr };
+	wxButton* wireNodesButton{ nullptr };
+
+	// SimpleCanvas instance (DELEGATE)
+	SimpleCanvas* canvas{ nullptr };
 
 	// project name indicator text controls
 	wxStaticText* stFileDir{ nullptr };
 	wxStaticText* stFileName{ nullptr };
-
-	// SimpleCanvas instance
-	SimpleCanvas* canvas{ nullptr };
 
 	// event table declaration
 	wxDECLARE_EVENT_TABLE();

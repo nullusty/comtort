@@ -6,9 +6,11 @@
 
 #include "menu.h"
 
+#include "wx/filename.h"
+
 // SimpleMenu constructor
 SimpleMenu::SimpleMenu(const wxString& title)
-	: wxFrame(nullptr, -1, title, wxPoint(-1,-1), wxSize(640, 480))
+	: wxFrame(nullptr, wxID_ANY, title, wxPoint(-1,-1), wxSize(640, 480))
 {
 	// menubar creation
 	auto menubar = new wxMenuBar;
@@ -31,24 +33,38 @@ SimpleMenu::SimpleMenu(const wxString& title)
 	SetMenuBar(menubar);
 
 	// user view panel
-	auto userPanel = new wxPanel(this, -1);
+	userPanel = new wxPanel(this, wxID_ANY);
 	//  sizer (vertical columns)
 	auto vbox = new wxBoxSizer(wxVERTICAL);
 	//  static text indicators of current project
-	stFileName = new wxStaticText(userPanel, -1, wxT("project name:"));
-	stFileDir = new wxStaticText(userPanel, -1, wxT("project dir:"));
+	stFileName = new wxStaticText(userPanel, wxID_ANY, wxT("project name:"));
+	stFileDir = new wxStaticText(userPanel, wxID_ANY, wxT("project dir:"));
 	//  add text controls to vbox
 	vbox->Add(stFileName, 0, 0, 0);
 	vbox->Add(stFileDir, 0, 0, 0);
 	//  create canvas
-	canvas = new SimpleCanvas((wxFrame*)userPanel);
-	//  bind event from canvas?
+	canvas = new SimpleCanvas((wxFrame*)userPanel, &project);
 	//  add canvas to vbox
 	vbox->Add(canvas, 0, 0, 0);
+	//  create buttons for canvas tools
+	//wxImage::AddHandler(new wxPNGHandler);
+	//auto myPath = wxFileName::GetCwd();
+	//wxBitmap editNodesBitmap(wxT("../../../../img/editNodes.png"), wxBITMAP_TYPE_PNG);
+	//wxBitmap wireNodesBitmap(wxT("../../../../img/wireNodes.png"), wxBITMAP_TYPE_PNG);
+	//editNodesButton = new wxButton(userPanel, wxID_ANY, wxT("edit"), wxDefaultPosition, wxSize(64, 64));
+	//wireNodesButton = new wxButton(userPanel, wxID_ANY, wxT("edit"), wxDefaultPosition, wxSize(64, 64));
+	//editNodesButton->SetBitmap(editNodesBitmap);
+	//wireNodesButton->SetBitmap(wireNodesBitmap);
+	//vbox->Add(editNodesButton);
+	//vbox->Add(wireNodesButton);
 	//  set wsizer hints
 	vbox->SetSizeHints(userPanel);
 	//  set sizer
 	userPanel->SetSizer(vbox);
+
+	// by default, hide the canvas
+	vbox->Hide(canvas);
+	vbox->Layout();
 
 	// Center frame in display
 	Centre();
@@ -95,6 +111,11 @@ void SimpleMenu::OnNew(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
+	// show the canvas
+	auto vbox = userPanel->GetSizer();
+	vbox->Show(canvas);
+	vbox->Layout();
+
 	// update static text
 	stFileName->SetLabel(wxString("project name: ") + project.GetName());
 	stFileDir->SetLabel(wxString("project location: ") + project.GetDirectory());
@@ -124,6 +145,14 @@ void SimpleMenu::OnOpen(wxCommandEvent& WXUNUSED(event))
 	// update static text
 	stFileName->SetLabel(wxString("project name: ") + project.GetName());
 	stFileDir->SetLabel(wxString("project location: ") + project.GetDirectory());
+
+	// show the canvas
+	auto vbox = userPanel->GetSizer();
+	vbox->Show(canvas);
+	vbox->Layout();
+
+	// tell canvas to paint to nodes
+	canvas->PaintNow();
 }
 //  save project
 void SimpleMenu::OnSave(wxCommandEvent& WXUNUSED(event)) 

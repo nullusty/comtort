@@ -5,16 +5,6 @@
 
 #include "node.h"
 
-Node::Node(wxPoint position)
-	: pos(position)
+Node::Node(double x, double y)
+	: xPos(x), yPos(y)
 {}
-
-void Node::SetPosition(wxPoint position)
-{
-	pos = position;
-}
-
-wxPoint Node::GetPosition(void)
-{
-	return pos;
-}

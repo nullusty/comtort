@@ -7,25 +7,33 @@
 
 #ifndef CANVAS_H
 
+#include "wx/wxprec.h"
+#ifndef WX_PRECOMP
 #include "wx/wx.h"
+#endif
+
+#include "project.h"
 
 class SimpleCanvas : public wxPanel
 {
 public:
-	SimpleCanvas(wxFrame* parent);
+	SimpleCanvas(wxFrame* parent, SimpleProject* project);
 
-	// painting events
-	void paintEvent(wxPaintEvent& event);
-	void paintNow();
+	// rendering events
+	void PaintEvent(wxPaintEvent& event);
+	void PaintNow(void);
+	void Render(wxDC& dc);
 
-	void render(wxDC& dc);
-
-	void mouseDown(wxMouseEvent& event);
+	// add a node
+	void MouseDown(wxMouseEvent& event);
 
 private:
+	// model
+	SimpleProject* project{ nullptr };
 
 	// declare static event table
 	wxDECLARE_EVENT_TABLE();
+	// DO NOT DECLARE ANYTHING ELSE HERE
 };
 
 #define CANVAS_H

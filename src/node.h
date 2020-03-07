@@ -4,17 +4,12 @@
 
 #ifndef NODE_H
 
-#include "wx/gdicmn.h"
+struct Node {
+	// exists globally on [0,1]^2
+	double xPos;
+	double yPos;
 
-class Node {
-private:
-	wxPoint pos;
-
-public:
-	Node(wxPoint position);
-
-	wxPoint GetPosition(void);
-	void SetPosition(wxPoint position);
+	Node(double x, double y);
 };
 
 #define NODE_H

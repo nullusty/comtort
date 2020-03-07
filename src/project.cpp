@@ -36,7 +36,7 @@ wxString SimpleProject::GetPath(void)
 // add node by position
 void SimpleProject::AddNodeByPosition(wxPoint position)
 {
-	nodes.push_back(Node(position));
+	nodes.push_back(Node((double)position.x, (double)position.y));
 }
 
 // get const ref to nodes
@@ -64,14 +64,47 @@ bool SimpleProject::Save(void)
 		return false;
 	}
 
-	for (auto& node : nodes) {
-		// write each of the nodes
+	// write nodes to file
+	double buffer[2]{ 0.0,0.0 };
+	for (auto&& node : nodes) {
+		// read into buffer
+		buffer[0] = node.xPos;
+		buffer[1] = node.yPos;
+		// write buffer
+		outFile.Write(buffer, sizeof(buffer));
 	}
+
+	// close file
+	outFile.Close();
+
 	return true;
 }
 // load project, returns false on failure
 bool SimpleProject::Load(void)
 {
-	// needs implementation
+	// open file
+	wxFile outFile(GetPath(), wxFile::read);
+	if (!outFile.IsOpened()) {
+		return false;
+	}
+
+	// get file size
+	wxFileOffset nSize = outFile.Length();
+	if (nSize == wxInvalidOffset) {
+		return false;
+	}
+
+	// read nodes from file
+	double buffer[2]{ 0.0,0.0 };
+	while(!outFile.Eof()) {
+		// read buffer
+		outFile.Read(buffer, sizeof(buffer));
+		// read into buffer
+		nodes.push_back(Node(buffer[0], buffer[1]));
+	}
+
+	// close file
+	outFile.Close();
+
 	return true;
 }

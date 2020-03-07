@@ -1,6 +1,11 @@
 #ifndef PROJECT_H
 
 #include <vector>
+
+#include "wx/file.h"
+#include "wx/string.h"
+#include "wx/gdicmn.h"
+
 #include "node.h"
 
 // project data structure

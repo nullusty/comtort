@@ -7,50 +7,62 @@
 
 #include "canvas.h"
 
+#include <cmath> // for std::round
+
 // SimpleCanvas constructor
-SimpleCanvas::SimpleCanvas(wxFrame* parent)
-	: wxPanel(parent, -1, wxDefaultPosition, wxSize(200, 200))
-{
-	// bind mousedown to event in parent window
-}
+SimpleCanvas::SimpleCanvas(wxFrame* parent, SimpleProject* project)
+	: wxPanel(parent, -1, wxDefaultPosition, wxSize(200, 200)),
+	  project(project)
+{}
 
-// called by wxWidgets when the panel needs to 
-// be redrawn - can be triggered by calling
-// Refresh()/Update()
-void SimpleCanvas::paintEvent(wxPaintEvent& event)
-{
+void SimpleCanvas::PaintEvent(wxPaintEvent& event) {
 	wxPaintDC dc(this);
-	render(dc);
+	Render(dc);
 }
 
-// called by a clientDC to paint on the panel
-// at any time
-void SimpleCanvas::paintNow()
-{
+void SimpleCanvas::PaintNow(void) {
 	wxClientDC dc(this);
-	render(dc);
+	Render(dc);
 }
 
-void SimpleCanvas::render(wxDC& dc)
-{
-	// draw a circle
-	//dc.SetBrush(*wxGREEN_BRUSH);
-	//dc.SetPen(wxPen(wxColor(255, 0, 0), 5));
-	//dc.DrawCircle(wxPoint(100, 100), 5);
+void SimpleCanvas::Render(wxDC& dc) {
+	// white background
+	dc.SetBackgroundMode(wxSOLID);
+	dc.SetBackground(*wxWHITE_BRUSH);
+	dc.Clear();
+
+	// black borders
+	wxSize dcSize = dc.GetSize();
+	int dcWidth = dcSize.GetWidth();
+	int dcHeight = dcSize.GetHeight();
+	dc.SetPen(wxPen(wxColor(0, 0, 0), 4));
+	dc.DrawLine(wxPoint(0, 0), wxPoint(0, dcHeight));
+	dc.DrawLine(wxPoint(0, dcHeight), wxPoint(dcWidth, dcHeight));
+	dc.DrawLine(wxPoint(dcWidth, dcHeight), wxPoint(dcWidth, 0));
+	dc.DrawLine(wxPoint(dcWidth, 0), wxPoint(0, 0));
+
+	// draw current nodes
+	dc.SetBrush(*wxGREY_BRUSH);
+	dc.SetPen(wxPen(wxColor(0, 0, 0), 3));
+	for (auto&& node : project->GetNodes()) {
+		// transform nodes
+		int xCoord = std::round(node.xPos);
+		int yCoord = std::round(node.yPos);
+		dc.DrawCircle(wxPoint(xCoord, yCoord), 4);
+	}
 }
 
-void SimpleCanvas::mouseDown(wxMouseEvent& event)
+void SimpleCanvas::MouseDown(wxMouseEvent& event)
 {
-	wxClientDC dc(this);
+	// add a node to the project
+	project->AddNodeByPosition(event.GetPosition());
 
-	// draw a circle there
-	dc.SetBrush(*wxBLUE_BRUSH);
-	dc.SetPen(wxPen(wxColor(0, 0, 0), 2));
-	dc.DrawCircle(event.GetPosition(), 12);
+	// redraw
+	PaintNow();
 }
 
 // declare static event table
 wxBEGIN_EVENT_TABLE(SimpleCanvas, wxPanel)
-	EVT_PAINT(SimpleCanvas::paintEvent)
-	EVT_LEFT_DOWN(SimpleCanvas::mouseDown)
+	EVT_PAINT(SimpleCanvas::PaintEvent)
+	EVT_LEFT_DOWN(SimpleCanvas::MouseDown)
 wxEND_EVENT_TABLE()
