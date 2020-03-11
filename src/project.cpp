@@ -45,6 +45,11 @@ const std::vector<Node>& SimpleProject::GetNodes(void)
 	return nodes;
 }
 
+// delete node by index
+void SimpleProject::DeleteNodeByIndex(std::size_t index) {
+	nodes.erase(nodes.begin() + index);
+}
+
 // create project, returns false on failure
 bool SimpleProject::Create(void)
 {
@@ -68,8 +73,8 @@ bool SimpleProject::Save(void)
 	double buffer[2]{ 0.0,0.0 };
 	for (auto&& node : nodes) {
 		// read into buffer
-		buffer[0] = node.xPos;
-		buffer[1] = node.yPos;
+		buffer[0] = node.x;
+		buffer[1] = node.y;
 		// write buffer
 		outFile.Write(buffer, sizeof(buffer));
 	}

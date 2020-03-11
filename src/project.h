@@ -41,6 +41,9 @@ public:
 	// get nodes
 	const std::vector<Node>& GetNodes(void);
 
+	// delete node at index
+	void DeleteNodeByIndex(std::size_t index);
+
 	// save project
 	bool Create(void);
 	// save project

@@ -13,6 +13,7 @@
 #include "wx/wx.h"
 #endif
 
+#include "tool.h"		// for SimpleTool
 #include "canvas.h"		// for SimpleCanvas
 #include "project.h"	// for SimpleProject
 
@@ -31,19 +32,29 @@ public:
 	void OnSave(wxCommandEvent& event);
 	//  quit application
 	void OnQuit(wxCommandEvent& event);
+	// toolbar event handlers
+	//  edit tool clicked
+	void OnEditToolClicked(wxCommandEvent& event);
+	//  wire tool clicked
+	void OnWireToolClicked(wxCommandEvent& event);
+	//  pan tool clicked
+	void OnPanToolClicked(wxCommandEvent& event);
 
 private:
 	// SimpleProject (MODEL)
 	SimpleProject project;
 
+	// window sizer
+	wxBoxSizer* sizer{ nullptr };
+
+	// SimpleTool object
+	SimpleTool tool;
+
+	// toolbar
+	wxToolBar* toolbar{ nullptr };
+
 	// User Panel
 	wxPanel* userPanel{ nullptr };
-
-	// Tool Panel
-	wxPanel* toolPanel{ nullptr };
-	//  buttons
-	wxButton* editNodesButton{ nullptr };
-	wxButton* wireNodesButton{ nullptr };
 
 	// SimpleCanvas instance (DELEGATE)
 	SimpleCanvas* canvas{ nullptr };

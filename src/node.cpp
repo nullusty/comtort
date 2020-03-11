@@ -5,6 +5,6 @@
 
 #include "node.h"
 
-Node::Node(double x, double y)
-	: xPos(x), yPos(y)
+Node::Node(float xPos, float yPos)
+	: x(xPos), y(yPos)
 {}

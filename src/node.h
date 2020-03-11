@@ -5,11 +5,11 @@
 #ifndef NODE_H
 
 struct Node {
-	// exists globally on [0,1]^2
-	double xPos;
-	double yPos;
+	// global coordinates
+	float x;
+	float y;
 
-	Node(double x, double y);
+	Node(float xPos, float yPos);
 };
 
 #define NODE_H

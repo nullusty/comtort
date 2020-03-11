@@ -10,7 +10,7 @@
 
 // SimpleMenu constructor
 SimpleMenu::SimpleMenu(const wxString& title)
-	: wxFrame(nullptr, wxID_ANY, title, wxPoint(-1,-1), wxSize(640, 480))
+	: wxFrame(nullptr, wxID_ANY, title, wxDefaultPosition, wxSize(640, 480))
 {
 	// menubar creation
 	auto menubar = new wxMenuBar;
@@ -32,32 +32,51 @@ SimpleMenu::SimpleMenu(const wxString& title)
 	// set menubar
 	SetMenuBar(menubar);
 
+	// window sizer
+	sizer = new wxBoxSizer(wxVERTICAL);
+
+	// toolbar
+	toolbar = new wxToolBar(this, wxID_ANY);
+	//  custom tool IDs
+	int editID = 0;
+	int wireID = 1;
+	int panID = 2;
+	//  image handler
+	wxImage::AddHandler(new wxPNGHandler);
+	//  toolbar bitmaps
+	wxBitmap editBMP(wxT("../../../../img/editNodes.png"), wxBITMAP_TYPE_PNG);
+	wxBitmap wireBMP(wxT("../../../../img/wireNodes.png"), wxBITMAP_TYPE_PNG);
+	wxBitmap panBMP(wxT("../../../../img/pan.png"), wxBITMAP_TYPE_PNG);
+	//  add tools
+	toolbar->AddTool(editID, wxT("edit"), editBMP);
+	toolbar->AddTool(wireID, wxT("wire"), wireBMP);
+	toolbar->AddTool(panID, wxT("pan"), panBMP);
+	toolbar->Realize();
+	//  add toolbar to window sizer
+	sizer->Add(toolbar, 0, 0, 0);
+	//  connect tool clicked events
+	Connect(editID, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(SimpleMenu::OnEditToolClicked));
+	Connect(wireID, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(SimpleMenu::OnWireToolClicked));
+	Connect(panID, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(SimpleMenu::OnPanToolClicked));
+
 	// user view panel
 	userPanel = new wxPanel(this, wxID_ANY);
 	//  sizer (vertical columns)
 	auto vbox = new wxBoxSizer(wxVERTICAL);
-	//  static text indicators of current project
+
+	// static text indicators of current project
 	stFileName = new wxStaticText(userPanel, wxID_ANY, wxT("project name:"));
 	stFileDir = new wxStaticText(userPanel, wxID_ANY, wxT("project dir:"));
 	//  add text controls to vbox
 	vbox->Add(stFileName, 0, 0, 0);
 	vbox->Add(stFileDir, 0, 0, 0);
-	//  create canvas
-	canvas = new SimpleCanvas((wxFrame*)userPanel, &project);
+
+	// create canvas
+	canvas = new SimpleCanvas((wxFrame*)userPanel, &project, &tool);
 	//  add canvas to vbox
 	vbox->Add(canvas, 0, 0, 0);
-	//  create buttons for canvas tools
-	//wxImage::AddHandler(new wxPNGHandler);
-	//auto myPath = wxFileName::GetCwd();
-	//wxBitmap editNodesBitmap(wxT("../../../../img/editNodes.png"), wxBITMAP_TYPE_PNG);
-	//wxBitmap wireNodesBitmap(wxT("../../../../img/wireNodes.png"), wxBITMAP_TYPE_PNG);
-	//editNodesButton = new wxButton(userPanel, wxID_ANY, wxT("edit"), wxDefaultPosition, wxSize(64, 64));
-	//wireNodesButton = new wxButton(userPanel, wxID_ANY, wxT("edit"), wxDefaultPosition, wxSize(64, 64));
-	//editNodesButton->SetBitmap(editNodesBitmap);
-	//wireNodesButton->SetBitmap(wireNodesBitmap);
-	//vbox->Add(editNodesButton);
-	//vbox->Add(wireNodesButton);
-	//  set wsizer hints
+
+	// set wsizer hints
 	vbox->SetSizeHints(userPanel);
 	//  set sizer
 	userPanel->SetSizer(vbox);
@@ -65,6 +84,16 @@ SimpleMenu::SimpleMenu(const wxString& title)
 	// by default, hide the canvas
 	vbox->Hide(canvas);
 	vbox->Layout();
+
+	// add userpanel to window sizer
+	sizer->Add(userPanel, 0, 0, 0);
+
+	// set window sizer
+	SetSizer(sizer);
+
+	// by default, hide the toolbar
+	sizer->Hide(toolbar);
+	sizer->Layout();
 
 	// Center frame in display
 	Centre();
@@ -111,6 +140,9 @@ void SimpleMenu::OnNew(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
+	// show the toolbar
+	sizer->Show(toolbar);
+	sizer->Layout();
 	// show the canvas
 	auto vbox = userPanel->GetSizer();
 	vbox->Show(canvas);
@@ -146,6 +178,9 @@ void SimpleMenu::OnOpen(wxCommandEvent& WXUNUSED(event))
 	stFileName->SetLabel(wxString("project name: ") + project.GetName());
 	stFileDir->SetLabel(wxString("project location: ") + project.GetDirectory());
 
+	// show the toolbar
+	sizer->Show(toolbar);
+	sizer->Layout();
 	// show the canvas
 	auto vbox = userPanel->GetSizer();
 	vbox->Show(canvas);
@@ -167,6 +202,23 @@ void SimpleMenu::OnSave(wxCommandEvent& WXUNUSED(event))
 void SimpleMenu::OnQuit(wxCommandEvent& WXUNUSED(event))
 {
 	Close(true);
+}
+
+// toolbar event handlers
+//  edit tool clicked
+void SimpleMenu::OnEditToolClicked(wxCommandEvent& WXUNUSED(event))
+{
+	tool.SetState(ToolState::edit);
+}
+//  wire tool clicked
+void SimpleMenu::OnWireToolClicked(wxCommandEvent& WXUNUSED(event))
+{
+	tool.SetState(ToolState::wire);
+}
+//  pan tool clicked
+void SimpleMenu::OnPanToolClicked(wxCommandEvent& WXUNUSED(event))
+{
+	tool.SetState(ToolState::pan);
 }
 
 // static event table definition
