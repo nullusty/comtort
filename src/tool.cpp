@@ -1,11 +1,25 @@
 #include "tool.h"
 
-SimpleTool::SimpleTool() {}
+SimpleTool::SimpleTool(SimpleProject* project)
+	: project(project), camera(nullptr), state(&SimpleToolState::edit)
+{}
 
-void SimpleTool::SetState(ToolState newState) {
+void SimpleTool::SetState(SimpleToolState* newState) {
 	state = newState;
 }
 
-ToolState SimpleTool::GetState(void) {
+SimpleToolState* SimpleTool::GetState(void) {
 	return state;
+}
+
+SimpleProject* SimpleTool::GetProject(void) {
+	return project;
+}
+
+void SimpleTool::SetCamera(SimpleCamera* newCamera) {
+	camera = newCamera;
+}
+
+SimpleCamera* SimpleTool::GetCamera(void) {
+	return camera;
 }

@@ -6,20 +6,25 @@
 
 #ifndef TOOL_H
 
-enum class ToolState {
-	edit,
-	pan,
-	wire
-};
+#include "toolstate.h"
+#include "project.h"
+#include "camera.h"
 
 class SimpleTool {
-	ToolState state{ ToolState::edit };
+	SimpleToolState* state{ nullptr };
+	SimpleProject* project{ nullptr };
+	SimpleCamera* camera{ nullptr };
 public:
-	SimpleTool();
+	SimpleTool(SimpleProject* project);
 
-	void SetState(ToolState newState);
-	ToolState GetState(void);
+	void SetState(SimpleToolState* newState);
+	SimpleToolState* GetState(void);
+
+	SimpleProject* GetProject(void);
+	void SetCamera(SimpleCamera* newCamera);
+	SimpleCamera* GetCamera(void);
 };
+
 
 #define TOOL_H
 #endif

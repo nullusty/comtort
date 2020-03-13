@@ -20,6 +20,9 @@ class SimpleCamera {
 	float width{ 0.0f };
 	float height{ 0.0f };
 
+	// global->viewport transformation matrix
+	glm::mat4 matrix{ 0.0f };
+
 public:
 	SimpleCamera();
 
@@ -36,6 +39,11 @@ public:
 	float GetViewportHeight(void);
 
 	glm::vec2 ViewportTransformation(glm::vec2 globalPosition);
+
+	void ResetTransformMatrix(void);
+	glm::mat4& GetTransformMatrix(void);
+
+	glm::mat4 GetInverseMatrix(void);
 };
 
 #define CAMERA_H

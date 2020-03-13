@@ -14,7 +14,8 @@ include_directories(${GLM_INCLUDE_DIR})
 add_executable(comtort WIN32 "comtort.cpp" "comtort.h" 
                "menu.cpp" "menu.h" "canvas.cpp" "canvas.h" 
 			   "node.cpp" "node.h" "project.cpp" "project.h"
-			   "camera.h" "camera.cpp" "tool.h" "tool.cpp")
+			   "camera.h" "camera.cpp" "toolstate.h" "toolstate.cpp"
+			   "tool.h" "tool.cpp")
 
 # target linking
 target_link_libraries(comtort ${wxWidgets_LIBRARIES})

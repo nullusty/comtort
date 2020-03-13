@@ -33,6 +33,8 @@ public:
 	//  quit application
 	void OnQuit(wxCommandEvent& event);
 	// toolbar event handlers
+	//  select tool clicked
+	void OnSelectToolClicked(wxCommandEvent& event);
 	//  edit tool clicked
 	void OnEditToolClicked(wxCommandEvent& event);
 	//  wire tool clicked

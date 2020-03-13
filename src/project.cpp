@@ -37,17 +37,59 @@ wxString SimpleProject::GetPath(void)
 void SimpleProject::AddNodeByPosition(wxPoint position)
 {
 	nodes.push_back(Node((double)position.x, (double)position.y));
+	selected.push_back(false);
 }
-
-// get const ref to nodes
-const std::vector<Node>& SimpleProject::GetNodes(void)
-{
-	return nodes;
-}
-
 // delete node by index
 void SimpleProject::DeleteNodeByIndex(std::size_t index) {
 	nodes.erase(nodes.begin() + index);
+	selected.erase(selected.begin() + index);
+}
+
+// get const ref to nodes
+// -> use if you want to call const methods of the nodes
+const std::vector<Node>& SimpleProject::GetNodes(void) const
+{
+	return nodes;
+}
+// get ref to nodes
+// -> use if you want to call a non-const method of the nodes
+std::vector<Node>& SimpleProject::GetNodes(void)
+{
+	// cast away const from other getter
+	return const_cast<std::vector<Node>&>(const_cast<const SimpleProject*>(this)->GetNodes());
+	// NOTE: this is okay because the member function calling it is non-const
+	//  the object itself is non-const, and casting away the const
+	//  is allowed.
+}
+
+void SimpleProject::SelectNodeByIndex(std::size_t index) {
+	selected.at(index) = true;
+}
+void SimpleProject::UnselectNodeByIndex(std::size_t index) {
+	selected.at(index) = false;
+}
+void SimpleProject::UnselectNodes(void) {
+	for (auto& val : selected) {
+		val = false;
+	}
+}
+
+const std::vector<bool>& SimpleProject::GetSelectedNodes(void) const
+{
+	return selected;
+}
+
+std::vector<bool>& SimpleProject::GetSelectedNodes(void)
+{
+	return const_cast<std::vector<bool>&>(const_cast<const SimpleProject*>(this)->GetSelectedNodes());
+}
+
+// link nodes by index,
+//  adds a reference to forward list of nodes.at(indexFrom)
+//  to nodes.at(indexTo)
+void SimpleProject::LinkNodesByIndex(std::size_t indexFrom, std::size_t indexTo)
+{
+	nodes.at(indexFrom).AddNode(&nodes.at(indexTo));
 }
 
 // create project, returns false on failure

@@ -24,16 +24,30 @@ public:
 	// rendering events
 	void PaintEvent(wxPaintEvent& event);
 	void PaintNow(void);
-	void Render(wxDC& dc);
+	void Render(wxMemoryDC& dc);
+	void EmptyEraseBackground(wxEraseEvent& event);
+
+	// swap buffers
+	void SwapBuffers(void);
 
 	// right click menu
 	void RightMouseDown(wxMouseEvent& event);
-	// add a node
-	void MouseDown(wxMouseEvent& event);
+	// mouse events, passed to tool instance
+	void LeftMouseDown(wxMouseEvent& event);
+	void MouseMotion(wxMouseEvent& event);
+	void LeftMouseUp(wxMouseEvent& event);
+
+	SimpleCamera* GetCamera(void);
 
 private:
 	// project reference (MODEL, this is DELEGATE)
 	SimpleProject* project{ nullptr };
+
+	// buffers (double buffered)
+	wxBitmap buffers[2];
+	//  pointers
+	wxBitmap* current{ nullptr };
+	wxBitmap* next{ nullptr };
 
 	// tool reference
 	SimpleTool* tool{ nullptr };

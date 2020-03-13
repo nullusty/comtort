@@ -16,9 +16,11 @@ private:
 	// project directory (containing directory in filesystem)
 	wxString dir{ "" };
 
-	// example project data
+	// project data
 	//  list of nodes
 	std::vector<Node> nodes{};
+	//  selected nodes
+	std::vector<bool> selected{};
 
 public:
 	// constructor
@@ -38,11 +40,28 @@ public:
 
 	// add node by position
 	void AddNodeByPosition(wxPoint position);
-	// get nodes
-	const std::vector<Node>& GetNodes(void);
-
 	// delete node at index
 	void DeleteNodeByIndex(std::size_t index);
+
+	// get const ref to nodes
+	const std::vector<Node>& GetNodes(void) const;
+	// get ref to nodes
+	std::vector<Node>& GetNodes(void);
+
+	// select node by index
+	void SelectNodeByIndex(std::size_t index);
+	// unselect node by index
+	void UnselectNodeByIndex(std::size_t index);
+	// unselect all
+	void UnselectNodes(void);
+
+	// get const ref to selected nodes list
+	const std::vector<bool>& GetSelectedNodes(void) const;
+	// get ref to selected nodes list
+	std::vector<bool>& GetSelectedNodes(void);
+
+	// link nodes by position, returns false if cannot link
+	void LinkNodesByIndex(std::size_t indexFrom, std::size_t indexTo);
 
 	// save project
 	bool Create(void);

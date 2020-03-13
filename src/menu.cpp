@@ -10,7 +10,8 @@
 
 // SimpleMenu constructor
 SimpleMenu::SimpleMenu(const wxString& title)
-	: wxFrame(nullptr, wxID_ANY, title, wxDefaultPosition, wxSize(640, 480))
+	: wxFrame(nullptr, wxID_ANY, title, wxDefaultPosition, wxSize(640, 480)),
+	  tool(&project)
 {
 	// menubar creation
 	auto menubar = new wxMenuBar;
@@ -38,16 +39,19 @@ SimpleMenu::SimpleMenu(const wxString& title)
 	// toolbar
 	toolbar = new wxToolBar(this, wxID_ANY);
 	//  custom tool IDs
-	int editID = 0;
-	int wireID = 1;
-	int panID = 2;
+	int selectID = 0;
+	int editID = 1;
+	int wireID = 2;
+	int panID = 3;
 	//  image handler
 	wxImage::AddHandler(new wxPNGHandler);
 	//  toolbar bitmaps
+	wxBitmap selectBMP(wxT("../../../../img/selectNodes.png"), wxBITMAP_TYPE_PNG);
 	wxBitmap editBMP(wxT("../../../../img/editNodes.png"), wxBITMAP_TYPE_PNG);
 	wxBitmap wireBMP(wxT("../../../../img/wireNodes.png"), wxBITMAP_TYPE_PNG);
 	wxBitmap panBMP(wxT("../../../../img/pan.png"), wxBITMAP_TYPE_PNG);
 	//  add tools
+	toolbar->AddTool(selectID, wxT("select"), selectBMP);
 	toolbar->AddTool(editID, wxT("edit"), editBMP);
 	toolbar->AddTool(wireID, wxT("wire"), wireBMP);
 	toolbar->AddTool(panID, wxT("pan"), panBMP);
@@ -55,6 +59,7 @@ SimpleMenu::SimpleMenu(const wxString& title)
 	//  add toolbar to window sizer
 	sizer->Add(toolbar, 0, 0, 0);
 	//  connect tool clicked events
+	Connect(selectID, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(SimpleMenu::OnSelectToolClicked));
 	Connect(editID, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(SimpleMenu::OnEditToolClicked));
 	Connect(wireID, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(SimpleMenu::OnWireToolClicked));
 	Connect(panID, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(SimpleMenu::OnPanToolClicked));
@@ -71,8 +76,9 @@ SimpleMenu::SimpleMenu(const wxString& title)
 	vbox->Add(stFileName, 0, 0, 0);
 	vbox->Add(stFileDir, 0, 0, 0);
 
-	// create canvas
+	// create canvas, set tools camera
 	canvas = new SimpleCanvas((wxFrame*)userPanel, &project, &tool);
+	tool.SetCamera(canvas->GetCamera());
 	//  add canvas to vbox
 	vbox->Add(canvas, 0, 0, 0);
 
@@ -205,20 +211,26 @@ void SimpleMenu::OnQuit(wxCommandEvent& WXUNUSED(event))
 }
 
 // toolbar event handlers
+//  select tool clicked
+void SimpleMenu::OnSelectToolClicked(wxCommandEvent& WXUNUSED(event))
+{
+	tool.SetState(&SimpleToolState::select);
+}
+
 //  edit tool clicked
 void SimpleMenu::OnEditToolClicked(wxCommandEvent& WXUNUSED(event))
 {
-	tool.SetState(ToolState::edit);
+	tool.SetState(&SimpleToolState::edit);
 }
 //  wire tool clicked
 void SimpleMenu::OnWireToolClicked(wxCommandEvent& WXUNUSED(event))
 {
-	tool.SetState(ToolState::wire);
+	// wire state needs implementation
 }
 //  pan tool clicked
 void SimpleMenu::OnPanToolClicked(wxCommandEvent& WXUNUSED(event))
 {
-	tool.SetState(ToolState::pan);
+	// pan state needs implementation
 }
 
 // static event table definition
