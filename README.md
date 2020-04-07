@@ -6,7 +6,6 @@ Audiovisual synthesis.
 
 * [CMake](https://cmake.org) - Build system used
 * [wxWidgets](https://github.com/wxWidgets/wxWidgets) - GUI Library used
-* [GLM](https://github.com/g-truc/glm) - Mathematics Library used
 
 ## Getting Started
 
