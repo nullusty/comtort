@@ -1,74 +1,47 @@
+// project.h
+// ---------
+// Declares main abstract data structure: a Project. This contains
+// methods for saving/loading a given Network to a file, as well as the
+// file metadata.
+
 #ifndef PROJECT_H
 
-#include <vector>
+#include <string>
 
-#include "wx/file.h"
-#include "wx/string.h"
-#include "wx/gdicmn.h"
+#include "network.h"
 
-#include "node.h"
-
-// project data structure
-class SimpleProject {
+class Project {
 private:
 	// project name (excluding .tort)
-	wxString name{ "" };
+	std::string name{ "" };
 	// project directory (containing directory in filesystem)
-	wxString dir{ "" };
-
-	// project data
-	//  list of nodes
-	std::vector<Node> nodes{};
-	//  selected nodes
-	std::vector<bool> selected{};
+	std::string dir{ "" };
 
 public:
 	// constructor
-	SimpleProject();
+	Project();
 
-	// set project name
-	void SetName(wxString& projectName);
-	// get project name
-	const wxString& GetName(void);
-	// set project directory
-	void SetDirectory(wxString& projectDirectory);
-	// get project directory
-	const wxString& GetDirectory(void);
+	// project metadata setters/getters
+	//  set project name
+	void SetName(std::string projectName);
+	//  get project name
+	const std::string& GetName() const;
+	//  set project directory
+	void SetDirectory(std::string& projectDirectory);
+	//  get project directory
+	const std::string& GetDirectory() const;
+	//  get full path of project file
+	std::string GetPath() const;
+	//  set full path of project file
+	void SetPath(std::string pathString);
 
-	// get path of project file
-	wxString GetPath(void);
-
-	// add node by position
-	void AddNodeByPosition(wxPoint position);
-	// delete node at index
-	void DeleteNodeByIndex(std::size_t index);
-
-	// get const ref to nodes
-	const std::vector<Node>& GetNodes(void) const;
-	// get ref to nodes
-	std::vector<Node>& GetNodes(void);
-
-	// select node by index
-	void SelectNodeByIndex(std::size_t index);
-	// unselect node by index
-	void UnselectNodeByIndex(std::size_t index);
-	// unselect all
-	void UnselectNodes(void);
-
-	// get const ref to selected nodes list
-	const std::vector<bool>& GetSelectedNodes(void) const;
-	// get ref to selected nodes list
-	std::vector<bool>& GetSelectedNodes(void);
-
-	// link nodes by position, returns false if cannot link
-	void LinkNodesByIndex(std::size_t indexFrom, std::size_t indexTo);
-
-	// save project
-	bool Create(void);
-	// save project
-	bool Save(void);
-	// load project
-	bool Load(void);
+	// serialization/deserialization methods
+	//  create a new project
+	bool Create(std::shared_ptr<Network> pNetwork);
+	//  save the current project
+	bool Save(std::shared_ptr<Network> pNetwork);
+	//  load an existing project
+	bool Load(std::shared_ptr<Network> pNetwork);
 };
 
 #define PROJECT_H

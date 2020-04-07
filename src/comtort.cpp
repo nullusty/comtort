@@ -1,30 +1,13 @@
-// comtort.cpp
-// -----------
-// defines ComtortApp (see comtort.h) and calls 
-// wxIMPLEMENT_APP to set up the platform-dependent
-// entry points (main or WinMain) implementing ComtortApp
- 
-// wxWidgets header files
-//  For compilers that don't support precompilation,
-//  include "wx/wx.h"
-#include "wx/wxprec.h"
-#ifndef WX_PRECOMP
-#include "wx/wx.h"
-#endif
+#include "comtort.h"
 
-// comtort header files
-#include "comtort.h"	// for ComtortApp
-#include "menu.h"		// for SimpleMenu
+// comtort headers
+#include "book.h"			// for Book
 
-// create platform-dependent main() or WinMain()
-// entry points that implement MyApp
-wxIMPLEMENT_APP(ComtortApp);
-
-// wxApp overrides
-//  OnInit: creates the application's main window
+// ComtortApp override definitions
+//  application initialization
 bool ComtortApp::OnInit() {
-	// create a SimpleMenu window
-	auto frame = new SimpleMenu("comtort");
+	// create a window
+	auto frame = new Book("comtort");
 
 	// set the top window (automatically deleted)
 	SetTopWindow(frame);
@@ -35,11 +18,14 @@ bool ComtortApp::OnInit() {
 	// start event loop
 	return true;
 }
-//  OnExit: clean up anything initialized in OnInit
-//          that wasn't set with SetTopWinodw
-int ComtortApp::OnExit()
-{
-	/* clean up here */
+//  application destruction
+int ComtortApp::OnExit() {
+	// cleanup anything initialized in ComtortApp::OnInit
+	// that wasn't set with wxApp::SetTopWindow
 
-	return 0; // return value is ignored
+	return 0;	// return value ignored
 }
+
+// makes the application class ComtortApp 
+// known to wxWidgets for dynamic construction
+wxIMPLEMENT_APP(ComtortApp);

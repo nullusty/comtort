@@ -1,165 +1,167 @@
-// canvas.cpp
-// ----------
-// defines the SimpleCanvas class (see canvas.h)
-// which provides an interface to project data (see project.h)
-// defines the static event table for this interface
-// via wxBEGIN_EVENT_TABLE/wxEND_EVENT_TABLE
-
 #include "canvas.h"
 
-#include <cmath> // for std::round
-
-// SimpleCanvas constructor
-SimpleCanvas::SimpleCanvas(wxFrame* parent, SimpleProject* project, SimpleTool* tool)
-	: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(200, 200)),
-	  project(project), tool(tool), 
-	  current(&buffers[0]), next(&buffers[1])
+Canvas::Canvas(wxWindow* pParent, std::shared_ptr<Camera> pCamera,
+	std::shared_ptr<Network> pNetwork)
+	: wxPanel(pParent, wxID_ANY, wxDefaultPosition,
+		wxSize(400, 400))
 {
-	// setup buffers
-	buffers[0].Create(wxSize(200, 200));
-	buffers[1].Create(wxSize(200, 200));
+	// instantiate network and camera ptrs
+	mpNetwork = pNetwork;
+	mpCamera = pCamera;
 
-	// setup camera
-	//  position
-	camera.SetPosition(100.0f, 100.0f);
-	//  zoom level
-	camera.SetZoomLevel(250.0f);
-	//  for aspect ratio computation
-	camera.SetViewportHeight(200.0f);
-	camera.SetViewportWidth(200.0f);
-	//  transform
-	camera.ResetTransformMatrix();
+	// create tool
+	mpTool = std::make_shared<Tool>(pNetwork, pCamera);
+
+	// create bitmap buffers
+	mBuffers[0].Create(wxSize(400, 400));
+	mBuffers[1].Create(wxSize(400, 400));
+
+	// set buffer pointers
+	mpCurrentBuffer = &mBuffers[0];
+	mpNextBuffer = &mBuffers[1];
 }
 
-void SimpleCanvas::PaintEvent(wxPaintEvent& event) {
+void Canvas::SwapBuffers() {
+	auto pTemp = mpCurrentBuffer;
+	mpCurrentBuffer = mpNextBuffer;
+	mpNextBuffer = pTemp;
+}
+
+void Canvas::SetCamera(std::shared_ptr<Camera> pCamera) {
+	mpCamera = pCamera;
+}
+void Canvas::SetNetwork(std::shared_ptr<Network> pNetwork) {
+	mpNetwork = pNetwork;
+}
+
+void Canvas::PaintEvent(wxPaintEvent& event) {
 	wxMemoryDC dc;
-	dc.SelectObject(*next);
+	dc.SelectObject(*mpNextBuffer);
 	Render(dc);
 	dc.SelectObject(wxNullBitmap);
-	wxPaintDC renderDC(this);
-	renderDC.DrawBitmap(*current, wxPoint(0, 0));
+	wxPaintDC paintDC(this);
+	paintDC.DrawBitmap(*mpCurrentBuffer, wxPoint(0, 0));
 }
 
-void SimpleCanvas::PaintNow(void) {
+void Canvas::PaintNow() {
 	wxMemoryDC dc;
-	dc.SelectObject(*next);
+	dc.SelectObject(*mpNextBuffer);
 	Render(dc);
 	dc.SelectObject(wxNullBitmap);
-	wxClientDC renderDC(this);
-	renderDC.DrawBitmap(*current, wxPoint(0, 0));
+	wxClientDC clientDC(this);
+	clientDC.DrawBitmap(*mpCurrentBuffer, wxPoint(0, 0));
 }
 
-void SimpleCanvas::Render(wxMemoryDC& dc) {
-	// white background
-	dc.SetBackgroundMode(wxSOLID);
-	dc.SetBackground(*wxWHITE_BRUSH);
-	dc.Clear();
+void Canvas::Render(wxDC& dc) {
+	// draw background
+	DrawBackground(dc);
 
-	// black borders
-	wxSize dcSize = dc.GetSize();
-	int dcWidth = dcSize.GetWidth();
-	int dcHeight = dcSize.GetHeight();
-	dc.SetPen(wxPen(wxColor(0, 0, 0), 4));
-	dc.DrawLine(wxPoint(0, 0), wxPoint(0, dcHeight));
-	dc.DrawLine(wxPoint(0, dcHeight), wxPoint(dcWidth, dcHeight));
-	dc.DrawLine(wxPoint(dcWidth, dcHeight), wxPoint(dcWidth, 0));
-	dc.DrawLine(wxPoint(dcWidth, 0), wxPoint(0, 0));
-
-	// draw current nodes
-	std::size_t index = 0;
-	for (const auto& node : project->GetNodes()) {
-		dc.SetBrush(*wxGREY_BRUSH);
-		dc.SetPen(wxPen(wxColor(0, 0, 0), 3));
-		// transform nodes from global to camera space
-		glm::vec2 tPos = camera.ViewportTransformation(glm::vec2(node.x, node.y));
-		// transform nodes from camera to pixel (rendering) space
-		dc.DrawCircle(wxPoint(std::round(tPos.x), std::round(tPos.y)), 4);
-
-		// draw forward connections
-		dc.SetPen(wxPen(wxColor(0, 0, 0), 3));
-		for (const auto& forwardNode : node.GetNodes()) {
-			dc.DrawLine(wxPoint(node.x, node.y),
-				wxPoint(forwardNode->x, forwardNode->y));
-		}
-
-		// if selected, draw a box around it (MOVE TO TOOLSTATE RENDERING?)
-		if (project->GetSelectedNodes().at(index)) {
-			dc.SetBrush(*wxTRANSPARENT_BRUSH);
-			dc.SetPen(wxPen(wxColor(0, 0, 0), 2));
-			dc.DrawRectangle(node.x - 8, node.y - 8, 16, 16);
-		}
-
-		index++;
-	}
+	// draw network
+	DrawNetwork(dc);
 
 	// draw tool
-	tool->GetState()->Render(*tool, dc);
+	DrawTool(dc);
 
 	// swap buffers
 	SwapBuffers();
 }
-void SimpleCanvas::EmptyEraseBackground(wxEraseEvent& WXUNUSED(event))
-{
-	// do nothing, in particular, do not call event.Skip()
+
+void Canvas::DrawBackground(wxDC& dc) {
+	// draws a white background
+	dc.SetBackgroundMode(wxSOLID);
+	dc.SetBackground(*wxWHITE_BRUSH);
+	dc.Clear();
 }
 
-void SimpleCanvas::SwapBuffers(void)
-{
-	// swap pointers
-	auto temp = current;
-	current = next;
-	next = temp;
+void Canvas::DrawNetwork(wxDC& dc) {
+	// currently unoptimal - node positions are transformed several times this way instead of just once.
+
+	// draw wires
+	for (auto& pWire : mpNetwork->GetWires()) {
+		vec2f inPosFrom{ pWire->GetFromX(), pWire->GetFromY() };
+		vec2f inPosTo{ pWire->GetToX(), pWire->GetToY() };
+		vec2f drawPosFrom = mpCamera->ViewportTransform(inPosFrom);
+		vec2f drawPosTo = mpCamera->ViewportTransform(inPosTo);
+		dc.SetBrush(*wxBLACK_BRUSH);
+		dc.SetPen(wxPen(wxColor(0, 0, 0), 3));
+		dc.DrawLine(wxPoint(drawPosFrom.x, drawPosFrom.y), wxPoint(drawPosTo.x, drawPosTo.y));
+	}
+
+	// draw nodes on top of wires
+	for (auto& pNode : mpNetwork->GetNodes()) {
+		vec2f inPos{ pNode->GetX(), pNode->GetY() };
+		vec2f drawPos = mpCamera->ViewportTransform(inPos);
+		dc.SetBrush(*wxGREY_BRUSH);
+		dc.SetPen(wxPen(wxColor(0, 0, 0), 2));
+		dc.DrawCircle(wxPoint(drawPos.x, drawPos.y), 8);
+	}
 }
 
-SimpleCamera* SimpleCanvas::GetCamera(void) {
-	return &camera;
+void Canvas::DrawTool(wxDC& dc) {
+	mpTool->Render(dc);
 }
 
-// Event handlers, passed to tool
-void SimpleCanvas::LeftMouseDown(wxMouseEvent& event)
-{
-	tool->GetState()->HandleLeftMouseDown(*tool, event);
+void Canvas::HandleMouseLeftPressed(wxMouseEvent& evt) {
+	mpTool->HandleMouseLeftPressed(evt);
 	PaintNow();
 }
-void SimpleCanvas::MouseMotion(wxMouseEvent& event)
-{
-	tool->GetState()->HandleMouseMotion(*tool, event);
-	PaintNow();
-}
-void SimpleCanvas::LeftMouseUp(wxMouseEvent& event)
-{
-	tool->GetState()->HandleLeftMouseUp(*tool, event);
+
+void Canvas::HandleMouseLeftReleased(wxMouseEvent& evt) {
+	mpTool->HandleMouseLeftReleased(evt);
 	PaintNow();
 }
 
-void SimpleCanvas::RightMouseDown(wxMouseEvent& event)
-{
-	/* old code to delete a node by position
-	case ToolState::edit:
-		// delete which node the mouse is over
-		auto p = event.GetPosition();
-		auto nodes = project->GetNodes();
-		for (std::size_t i = 0; i < nodes.size(); ++i) {
-			auto node = nodes.at(i);
-			// box collision detection
-			if ((std::abs(p.x - std::round(node.x)) < 4 * 2)
-				& (std::abs(p.y - std::round(node.y)) < 4 * 2))
-			{
-				project->DeleteNodeByIndex(i);
-			}
-		}
-		// redraw
-		PaintNow();
-		break;
-	*/
+void Canvas::HandleMouseRightPressed(wxMouseEvent& evt) {
+	mpTool->HandleMouseRightPressed(evt);
+	PaintNow();
 }
 
-// declare static event table
-wxBEGIN_EVENT_TABLE(SimpleCanvas, wxPanel)
-	EVT_PAINT(SimpleCanvas::PaintEvent)
-	EVT_ERASE_BACKGROUND(SimpleCanvas::EmptyEraseBackground)
-	EVT_LEFT_DOWN(SimpleCanvas::LeftMouseDown)
-	EVT_MOTION(SimpleCanvas::MouseMotion)
-	EVT_LEFT_UP(SimpleCanvas::LeftMouseUp)
-	EVT_RIGHT_DOWN(SimpleCanvas::RightMouseDown)
-wxEND_EVENT_TABLE()
+void Canvas::HandleMouseRightReleased(wxMouseEvent& evt) {
+	mpTool->HandleMouseRightReleased(evt);
+	PaintNow();
+}
+
+void Canvas::HandleMouseMotion(wxMouseEvent& evt) {
+	mpTool->HandleMouseMotion(evt);
+
+	PaintNow();
+}
+
+void Canvas::HandleMouseWheel(wxMouseEvent& evt) {
+	mpTool->HandleMouseWheel(evt);
+	PaintNow();
+}
+
+void Canvas::HandleKeyDown(wxKeyEvent& evt) {
+	mpTool->HandleKeyboardKeyPressed(evt);
+	PaintNow();
+}
+
+void Canvas::HandleKeyUp(wxKeyEvent& evt) {
+	mpTool->HandleKeyboardKeyReleased(evt);
+	PaintNow();
+}
+
+void Canvas::HandleSelectButton(wxCommandEvent& evt) {
+	mpTool->Select();
+	SetFocus();
+}
+
+void Canvas::HandleEditButton(wxCommandEvent& evt) {
+	mpTool->Edit();
+	SetFocus();
+}
+
+void Canvas::HandlePanButton(wxCommandEvent& evt) {
+	mpTool->Pan();
+	SetFocus();
+}
+
+void Canvas::HandleMoveButton(wxCommandEvent& evt) {
+	mpTool->Move();
+	SetFocus();
+}
+
+void Canvas::HandleMouseEnter(wxMouseEvent& evt) {
+	SetFocus();
+}

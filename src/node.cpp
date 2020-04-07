@@ -1,22 +1,36 @@
 // node.cpp
 // --------
 // defines the basic node class (see node.h) that
-// currently only holds positional data 
+// currently only holds positional data and a
+// string label (unused)
 
 #include "node.h"
 
-Node::Node(float xPos, float yPos)
-	: x(xPos), y(yPos)
-{}
+// constructors
+//  default
+Node::Node() {}
+//  positional
+Node::Node(float xPosition, float yPosition)
+	: mPosX(xPosition), mPosY(yPosition) {}
 
-// get const ref to forward connections
-const std::vector<Node*>& Node::GetNodes(void) const
-{
-	return nodes;
+// positional data getters/setters
+float Node::GetX() const { 
+	return mPosX; 
+}
+void Node::SetX(float xPosition) {
+	mPosX = xPosition;
+}
+float Node::GetY() const {
+	return mPosY;
+}
+void Node::SetY(float yPosition) {
+	mPosY = yPosition;
 }
 
-// add node to forward connections
-void Node::AddNode(Node* node)
-{
-	nodes.push_back(node);
+// label getters/setters
+const std::string& Node::GetLabel() const {
+	return mLabel;
+}
+void Node::SetLabel(std::string& label) {
+	mLabel = label;
 }

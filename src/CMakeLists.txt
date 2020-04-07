@@ -5,17 +5,14 @@
 find_package(wxWidgets REQUIRED COMPONENTS net core base)
 include(${wxWidgets_USE_FILE})
 
-# glm
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
-find_package(GLM REQUIRED)
-include_directories(${GLM_INCLUDE_DIR})
-
 # target executable
-add_executable(comtort WIN32 "comtort.cpp" "comtort.h" 
-               "menu.cpp" "menu.h" "canvas.cpp" "canvas.h" 
-			   "node.cpp" "node.h" "project.cpp" "project.h"
-			   "camera.h" "camera.cpp" "toolstate.h" "toolstate.cpp"
-			   "tool.h" "tool.cpp")
+add_executable(comtort WIN32 "comtort.h" "comtort.cpp"
+	"node.h" "node.cpp" "wire.h" "wire.cpp"
+	"network.h" "network.cpp" "project.h" "project.cpp"
+	"tool.h" "tool.cpp" "camera.h" "camera.cpp" 
+	"input_defs.h" "draw_defs.h" "math_defs.h"
+	"math_defs.cpp" "canvas.h" "canvas.cpp" 
+	"book.h" "book.cpp" "page.h" "page.cpp")
 
 # target linking
 target_link_libraries(comtort ${wxWidgets_LIBRARIES})

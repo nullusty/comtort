@@ -1,49 +1,54 @@
-// camera.h
-// --------
-// Declares the SimpleCamera class which provides
-// a representation for how the user sees the 
-// nodes through the SimpleCanvas rendering panel.
-
 #ifndef CAMERA_H
 
-#include "glm/glm.hpp"	// GLM core
-#include "glm/ext.hpp"	// GLM extensions
+#include "math_defs.h"	// for vec2f
+#include "draw_defs.h"	// for rect
 
-class SimpleCamera {
-	// global coords of camera position
-	glm::vec2 pos{ 0.0f,0.0f };
+class Camera {
+	// view rectangle dimensions
+	rect mViewRect;
+	// view position
+	vec2f mViewPos;
+	// view orientation (angular, radians)
+	float mViewAngle;
 
-	// zoom level (altitude)
-	float zoom{ 0.0f };
-
-	// width and height of viewport
-	float width{ 0.0f };
-	float height{ 0.0f };
-
-	// global->viewport transformation matrix
-	glm::mat4 matrix{ 0.0f };
+	// viewport rectangle dimensions
+	rect mClientRect;
 
 public:
-	SimpleCamera();
+	// constructor
+	Camera(vec2f viewPosition, rect viewRectangle,
+		float viewAngle, rect clientRectangle);
 
-	void SetPosition(float x, float y);
-	const glm::vec2& GetPosition(void);
+	// view getters/setters
+	//  position
+	void SetViewPosition(vec2f position);
+	const vec2f& GetViewPosition() const;
+	//  rectangle
+	void SetViewWidth(float width);
+	float GetViewWidth() const;
+	void SetViewHeight(float height);
+	float GetViewHeight() const;
+	//  orientation (angular, radians)
+	void SetViewAngle(float angle);
+	float GetViewAngle() const;
 
-	void SetZoomLevel(float zoomLevel);
-	float GetZoomLevel(void);
+	// view methods interface
+	void TranslateView(vec2f translation);
+	void ScaleView(rect scale);
+	void RotateView(float angle);
 
-	void SetViewportWidth(float viewportWidth);
-	void SetViewportHeight(float viewportHeight);
-
-	float GetViewportWidth(void);
-	float GetViewportHeight(void);
-
-	glm::vec2 ViewportTransformation(glm::vec2 globalPosition);
-
-	void ResetTransformMatrix(void);
-	glm::mat4& GetTransformMatrix(void);
-
-	glm::mat4 GetInverseMatrix(void);
+	// client setters/getters
+	void SetClientWidth(float width);
+	float GetClientWidth() const;
+	void SetClientHeight(float height);
+	float GetClientHeight() const;
+	// point transformation interface
+	//  global coords -> client coords
+	const vec2f& ViewportTransform(vec2f& position) const;
+	//  client coords -> global coords
+	const vec2f& ViewTransform(vec2f& position) const;
+	// rect transforms
+	const rect4& ViewTransformRect(rect4& rect4) const;
 };
 
 #define CAMERA_H

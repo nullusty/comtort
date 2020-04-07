@@ -4,25 +4,31 @@
 
 #ifndef NODE_H
 
-#include <vector>
+#include <string>
 
 class Node {
-	// forward connections
-	std::vector<Node*> nodes;
+	// coordinates in 2D space
+	float mPosX{ 0.0f }, mPosY{ 0.0f };
+
+	// label
+	std::string mLabel{ "" };
 
 public:
-	// global coordinates
-	float x{ 0.0f };
-	float y{ 0.0f };
+	// constructors
+	//  default
+	Node();
+	//  positional
+	Node(float xPosition, float yPosition);
 
-	// constructor
-	Node(float xPos, float yPos);
+	// positional data getters/setters
+	float GetX() const;
+	void SetX(float xPosition);
+	float GetY() const;
+	void SetY(float yPosition);
 
-	// get const ref to forward list
-	const std::vector<Node*>& GetNodes(void) const;
-
-	// add node to forward list
-	void AddNode(Node* node);
+	// label getters/setters
+	const std::string& GetLabel() const;
+	void SetLabel(std::string& label);
 };
 
 #define NODE_H
