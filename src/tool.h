@@ -17,6 +17,10 @@ class Tool {
 	std::shared_ptr<Network> mpNetwork{ nullptr };
 	std::shared_ptr<Camera> mpCamera{ nullptr };
 
+	// selected objects
+	std::vector<std::shared_ptr<Node>> mpSelectedNodes{};
+	std::vector<std::shared_ptr<Wire>> mpSelectedWires{};
+
 public:
 	Tool(std::shared_ptr<Network> pNetwork,
 		 std::shared_ptr<Camera> pCamera);
@@ -41,6 +45,9 @@ public:
 
 	// forward to state method for rendering
 	void Render(wxDC& dc);
+
+	// selected entities rendering
+	void RenderSelected(wxDC& dc);
 };
 
 // Abstract Tool State interface

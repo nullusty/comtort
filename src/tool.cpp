@@ -23,7 +23,7 @@ void Tool::State::SelectState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent&
 				& intervalContains(pNode->GetY() - gRad, pNode->GetY() + gRad, mMouseDownPos.y))
 			{
 				// add it to the list of nodes
-				mpNodes.push_back(pNode);
+				pTool->mpSelectedNodes.push_back(pNode);
 				break;
 			}
 		}
@@ -35,7 +35,7 @@ void Tool::State::SelectState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent&
 			mDrawable = true;
 
 			// clear currently selected nodes
-			mpNodes.clear();
+			pTool->mpSelectedNodes.clear();
 	}
 }
 void Tool::State::SelectState::HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent)
@@ -55,7 +55,7 @@ void Tool::State::SelectState::HandleMouseLeftReleased(Tool* pTool, wxMouseEvent
 			if (intervalContains(mMouseDownPos.x, mMouseUpPos.x, pNode->GetX())
 				& intervalContains(mMouseDownPos.y, mMouseUpPos.y, pNode->GetY()))
 			{
-				mpNodes.push_back(pNode);
+				pTool->mpSelectedNodes.push_back(pNode);
 			}
 		}
 	}
@@ -147,16 +147,6 @@ void Tool::State::SelectState::Render(Tool* pTool, wxDC& dc)
 		dc.DrawRectangle(ulc.x, ulc.y, lrc.x - ulc.x, lrc.y - ulc.y);
 	}
 
-	// always draw the selected nodes
-	for (auto& pNode : mpNodes) {
-		// get positions of nodes select region in viewport space
-		vec2f inPos{ pNode->GetX(), pNode->GetY() };
-		vec2f drawPos = pTool->mpCamera->ViewportTransform(inPos);
-
-		dc.SetBrush(*wxTRANSPARENT_BRUSH);
-		dc.SetPen(wxPen(wxColor(255, 0, 0), 3));
-		dc.DrawRectangle(drawPos.x - 8, drawPos.y - 8, 16, 16);
-	}
 }
 // definition
 Tool::State::SelectState Tool::State::Select;
@@ -493,5 +483,22 @@ void Tool::HandleKeyboardKeyReleased(wxKeyEvent& keyEvent)
 	mpState->HandleKeyboardKeyReleased(this, keyEvent);
 }
 void Tool::Render(wxDC& dc) {
+	// always draw selected wires and nodes
+	RenderSelected(dc);
+	// toolstate-specific rendering
 	mpState->Render(this, dc);
+}
+
+void Tool::RenderSelected(wxDC& dc) {
+	// always draw the selected nodes
+	for (auto& pNode : mpSelectedNodes) {
+		// get positions of nodes select region in viewport space
+		vec2f inPos{ pNode->GetX(), pNode->GetY() };
+		vec2f drawPos = mpCamera->ViewportTransform(inPos);
+
+		// draw a rectangle
+		dc.SetBrush(*wxTRANSPARENT_BRUSH);
+		dc.SetPen(wxPen(wxColor(255, 0, 0), 3));
+		dc.DrawRectangle(drawPos.x - 8, drawPos.y - 8, 16, 16);
+	}
 }
