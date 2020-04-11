@@ -39,12 +39,6 @@ Page::Page(wxNotebook* parent)
 	// bind network paint event (could be static)
 	mpCanvas->Bind(wxEVT_PAINT, &Canvas::PaintEvent, mpCanvas);
 	// bind event handlers (could be static)
-	mpCanvas->Bind(wxEVT_LEFT_DOWN, &Canvas::HandleMouseLeftPressed, mpCanvas);
-	mpCanvas->Bind(wxEVT_LEFT_UP, &Canvas::HandleMouseLeftReleased, mpCanvas);
-	mpCanvas->Bind(wxEVT_RIGHT_DOWN, &Canvas::HandleMouseRightPressed, mpCanvas);
-	mpCanvas->Bind(wxEVT_RIGHT_UP, &Canvas::HandleMouseRightReleased, mpCanvas);
-	mpCanvas->Bind(wxEVT_MOTION, &Canvas::HandleMouseMotion, mpCanvas);
-	mpCanvas->Bind(wxEVT_MOUSEWHEEL, &Canvas::HandleMouseWheel, mpCanvas);
 	mpCanvas->Bind(wxEVT_KEY_DOWN, &Canvas::HandleKeyDown, mpCanvas);
 	mpCanvas->Bind(wxEVT_KEY_UP, &Canvas::HandleKeyUp, mpCanvas);
 	// bind button events to methods of Canvas (requires dynamic binding)

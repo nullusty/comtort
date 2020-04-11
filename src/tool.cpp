@@ -1,19 +1,41 @@
 #include "tool.h"
 
 // toolstates
+void ToolState::SetPopEventType(wxEventType eventType) {
+	mPopEventType = eventType;
+}
+wxEventType ToolState::GetPopEventType() const {
+	return mPopEventType;
+}
 
 // SelectState
 // LeftDown -> Select a single node. (NEEDS IMPLEMENTATION)
 //	+ CTRL  -> Add a node to the selection.
 //  + DRAG  -> Regional select
-void Tool::State::SelectState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mouseEvent)
+void ToolState::SelectState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mouseEvent)
 {
 	// project viewport coords -> view coords, capture those
 	vec2f inPos{ mouseEvent.GetX(), mouseEvent.GetY() };
 	mMouseDownPos = pTool->mpCamera->ViewTransform(inPos);
-	// nodes are drawn with a radius of 8.0f, what is the corresponding radius in view space?
+
+	// nodes are drawn in viewport space with a radius of 8.0f, what is the corresponding radius in view space?
 	//  (assumes 1:1 aspect ratio of viewport, fine for now)
 	float gRad = 8.0f * pTool->mpCamera->GetViewWidth() / pTool->mpCamera->GetClientWidth();
+
+	// move state transition
+	for (auto& pNode : pTool->mpSelectedNodes) {
+		if (intervalContains(pNode->GetX() - gRad, pNode->GetX() + gRad, mMouseDownPos.x)
+			& intervalContains(pNode->GetY() - gRad, pNode->GetY() + gRad, mMouseDownPos.y))
+		{
+			// go into movestate, call the same handler, and when finished restore this state.
+			pTool->PushState(&ToolState::Move);
+			pTool->mpStates.top()->SetPopEventType(wxEVT_LEFT_UP);
+			pTool->mpStates.top()->HandleMouseLeftPressed(pTool, mouseEvent);
+			// StateToPush, wxEventType, std::function<void(pTool, wxMouseEvent)>
+			// Transition(State*, wxEventType, std::function)
+			return;
+		}
+	}
 
 	// append select
 	if (mCtrl) {
@@ -30,15 +52,15 @@ void Tool::State::SelectState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent&
 	}
 	// regional select
 	else {
-			// set drawable region
-			mMouseUpPos = mMouseDownPos;
-			mDrawable = true;
+		// set drawable region
+		mMouseUpPos = mMouseDownPos;
+		mDrawable = true;
 
-			// clear currently selected nodes
-			pTool->mpSelectedNodes.clear();
+		// clear currently selected nodes
+		pTool->mpSelectedNodes.clear();
 	}
 }
-void Tool::State::SelectState::HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent)
+void ToolState::SelectState::HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent)
 {
 	// project viewport coords -> view coords, capture those
 	vec2f inPos{ mouseEvent.GetX(), mouseEvent.GetY() };
@@ -63,11 +85,19 @@ void Tool::State::SelectState::HandleMouseLeftReleased(Tool* pTool, wxMouseEvent
 	// no longer drawable
 	mDrawable = false;
 }
-void Tool::State::SelectState::HandleMouseRightPressed(Tool* pTool, wxMouseEvent& mouseEvent)
+void ToolState::SelectState::HandleMouseMiddlePressed(Tool* pTool, wxMouseEvent& mouseEvent)
+{
+	pTool->PushState(&ToolState::Pan);
+	pTool->mpStates.top()->SetPopEventType(wxEVT_MIDDLE_UP);
+	pTool->mpStates.top()->HandleMouseLeftPressed(pTool, mouseEvent);
+}
+void ToolState::SelectState::HandleMouseMiddleReleased(Tool* pTool, wxMouseEvent& mouseEvent)
 {}
-void Tool::State::SelectState::HandleMouseRightReleased(Tool* pTool, wxMouseEvent& mouseEvent)
+void ToolState::SelectState::HandleMouseRightPressed(Tool* pTool, wxMouseEvent& mouseEvent)
 {}
-void Tool::State::SelectState::HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEvent)
+void ToolState::SelectState::HandleMouseRightReleased(Tool* pTool, wxMouseEvent& mouseEvent)
+{}
+void ToolState::SelectState::HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEvent)
 {
 	// update the movable corner of the select region, if we are selecting
 	if (mDrawable) {
@@ -75,9 +105,14 @@ void Tool::State::SelectState::HandleMouseMotion(Tool* pTool, wxMouseEvent& mous
 		mMouseUpPos = pTool->mpCamera->ViewTransform(inPos);
 	}
 }
-void Tool::State::SelectState::HandleMouseWheel(Tool* pTool, wxMouseEvent& mouseEvent) {}
+void ToolState::SelectState::HandleMouseWheel(Tool* pTool, wxMouseEvent& mouseEvent) 
+{
+	// How to do this correctly with the stack? Not generalizable to instantiated states.
+	// -> How can the PopEventType be "not wheel"?
+	ToolState::Pan.HandleMouseWheel(pTool, mouseEvent);
+}
 //  key
-void Tool::State::SelectState::HandleKeyboardKeyPressed(Tool* pTool, wxKeyEvent& keyEvent)
+void ToolState::SelectState::HandleKeyboardKeyPressed(Tool* pTool, wxKeyEvent& keyEvent)
 {	
 	wxChar uc = keyEvent.GetUnicodeKey();
 
@@ -98,8 +133,8 @@ void Tool::State::SelectState::HandleKeyboardKeyPressed(Tool* pTool, wxKeyEvent&
 			}
 			break;
 		case WXK_DELETE:
-			pTool->mpNetwork->RemoveNodesCmd(mpNodes);
-			mpNodes.clear();
+			pTool->mpNetwork->RemoveNodesCmd(pTool->mpSelectedNodes);
+			pTool->mpSelectedNodes.clear();
 			break;
 		}
 	}
@@ -116,7 +151,7 @@ void Tool::State::SelectState::HandleKeyboardKeyPressed(Tool* pTool, wxKeyEvent&
 		}
 	}
 }
-void Tool::State::SelectState::HandleKeyboardKeyReleased(Tool* pTool, wxKeyEvent& keyEvent)
+void ToolState::SelectState::HandleKeyboardKeyReleased(Tool* pTool, wxKeyEvent& keyEvent)
 {
 	wxChar uc = keyEvent.GetUnicodeKey();
 	if (uc != WXK_NONE) {
@@ -134,7 +169,7 @@ void Tool::State::SelectState::HandleKeyboardKeyReleased(Tool* pTool, wxKeyEvent
 	}
 }
 // rendering
-void Tool::State::SelectState::Render(Tool* pTool, wxDC& dc) 
+void ToolState::SelectState::Render(Tool* pTool, wxDC& dc) 
 {
 	// conditionally draw the select region
 	if (mDrawable) {
@@ -149,11 +184,11 @@ void Tool::State::SelectState::Render(Tool* pTool, wxDC& dc)
 
 }
 // definition
-Tool::State::SelectState Tool::State::Select;
+ToolState::SelectState ToolState::Select;
 
 // EditState
 //  mouse events
-void Tool::State::EditState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mouseEvent){
+void ToolState::EditState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mouseEvent){
 	// project viewport coords -> view coords, capture those
 	vec2f inPos{ mouseEvent.GetX(), mouseEvent.GetY() };
 	vec2f outPos = pTool->mpCamera->ViewTransform(inPos);
@@ -161,8 +196,12 @@ void Tool::State::EditState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& m
 	// make a node there
 	pTool->mpNetwork->AddNodeCmd(outPos.x, outPos.y);
 }
-void Tool::State::EditState::HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent){}
-void Tool::State::EditState::HandleMouseRightPressed(Tool* pTool, wxMouseEvent& mouseEvent){
+void ToolState::EditState::HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent){}
+void ToolState::EditState::HandleMouseMiddlePressed(Tool* pTool, wxMouseEvent& mouseEvent)
+{}
+void ToolState::EditState::HandleMouseMiddleReleased(Tool* pTool, wxMouseEvent& mouseEvent)
+{}
+void ToolState::EditState::HandleMouseRightPressed(Tool* pTool, wxMouseEvent& mouseEvent){
 	// project viewport coords -> view coords, capture those
 	vec2f inPos{ mouseEvent.GetX(), mouseEvent.GetY() };
 	vec2f outPos = pTool->mpCamera->ViewTransform(inPos);
@@ -172,7 +211,7 @@ void Tool::State::EditState::HandleMouseRightPressed(Tool* pTool, wxMouseEvent& 
 	// drawable
 	mDrawable = true;
 }
-void Tool::State::EditState::HandleMouseRightReleased(Tool* pTool, wxMouseEvent& mouseEvent){
+void ToolState::EditState::HandleMouseRightReleased(Tool* pTool, wxMouseEvent& mouseEvent){
 	// project viewport coords -> view coords, capture those
 	vec2f inPos{ mouseEvent.GetX(), mouseEvent.GetY() };
 	vec2f outPos = pTool->mpCamera->ViewTransform(inPos);
@@ -202,7 +241,7 @@ void Tool::State::EditState::HandleMouseRightReleased(Tool* pTool, wxMouseEvent&
 	// no longer drawable
 	mDrawable = false;
 }
-void Tool::State::EditState::HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEvent){
+void ToolState::EditState::HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEvent){
 	if (mDrawable) {
 		// project viewport coords -> view coords, capture those
 		vec2f inPos{ mouseEvent.GetX(), mouseEvent.GetY() };
@@ -210,10 +249,9 @@ void Tool::State::EditState::HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseE
 		mMouseUpPos.x = outPos.x; mMouseUpPos.y = outPos.y;
 	}
 }
-void Tool::State::EditState::HandleMouseWheel(Tool* pTool, wxMouseEvent& mouseEvent) {}
-
+void ToolState::EditState::HandleMouseWheel(Tool* pTool, wxMouseEvent& mouseEvent) {}
 //  keyboard events
-void Tool::State::EditState::HandleKeyboardKeyPressed(Tool* pTool, wxKeyEvent& keyEvent)
+void ToolState::EditState::HandleKeyboardKeyPressed(Tool* pTool, wxKeyEvent& keyEvent)
 {
 	wxChar uc = keyEvent.GetUnicodeKey();
 
@@ -243,9 +281,9 @@ void Tool::State::EditState::HandleKeyboardKeyPressed(Tool* pTool, wxKeyEvent& k
 		}
 	}
 }
-void Tool::State::EditState::HandleKeyboardKeyReleased(Tool* pTool, wxKeyEvent& keyEvent){}
+void ToolState::EditState::HandleKeyboardKeyReleased(Tool* pTool, wxKeyEvent& keyEvent){}
 //  render event
-void Tool::State::EditState::Render(Tool* pTool, wxDC& dc) {
+void ToolState::EditState::Render(Tool* pTool, wxDC& dc) {
 	if (mDrawable) {
 		// project into viewport
 		vec2f inPosFrom{ mMouseDownPos.x, mMouseDownPos.y };
@@ -259,11 +297,11 @@ void Tool::State::EditState::Render(Tool* pTool, wxDC& dc) {
 	}
 }
 //  definition
-Tool::State::EditState Tool::State::Edit;
+ToolState::EditState ToolState::Edit;
 
-// CameraState
+// PanState
 //  mouse
-void Tool::State::PanState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mouseEvent) {
+void ToolState::PanState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mouseEvent) {
 	// project viewport coords -> view coords, capture those
 	vec2f inPos{ mouseEvent.GetX(), mouseEvent.GetY() };
 	vec2f outPos = pTool->mpCamera->ViewTransform(inPos);
@@ -271,7 +309,7 @@ void Tool::State::PanState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mo
 
 	mPanning = true;
 }
-void Tool::State::PanState::HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent) {
+void ToolState::PanState::HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent) {
 	// project viewport coords -> view coords, capture those
 	vec2f inPos{ mouseEvent.GetX(), mouseEvent.GetY() };
 	vec2f outPos = pTool->mpCamera->ViewTransform(inPos);
@@ -283,9 +321,11 @@ void Tool::State::PanState::HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& m
 
 	mPanning = false;
 }
-void Tool::State::PanState::HandleMouseRightPressed(Tool* pTool, wxMouseEvent& mouseEvent) {}
-void Tool::State::PanState::HandleMouseRightReleased(Tool* pTool, wxMouseEvent& mouseEvent) {}
-void Tool::State::PanState::HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEvent) {
+void ToolState::PanState::HandleMouseMiddlePressed(Tool* pTool, wxMouseEvent& mouseEvent) {}
+void ToolState::PanState::HandleMouseMiddleReleased(Tool* pTool, wxMouseEvent& mouseEvent) {}
+void ToolState::PanState::HandleMouseRightPressed(Tool* pTool, wxMouseEvent& mouseEvent) {}
+void ToolState::PanState::HandleMouseRightReleased(Tool* pTool, wxMouseEvent& mouseEvent) {}
+void ToolState::PanState::HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEvent) {
 	if (mPanning) {
 		// project viewport coords -> view coords, capture those
 		vec2f inPos{ mouseEvent.GetX(), mouseEvent.GetY() };
@@ -297,7 +337,7 @@ void Tool::State::PanState::HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEv
 		pTool->mpCamera->TranslateView(trans);
 	}
 }
-void Tool::State::PanState::HandleMouseWheel(Tool* pTool, wxMouseEvent& mouseEvent) {
+void ToolState::PanState::HandleMouseWheel(Tool* pTool, wxMouseEvent& mouseEvent) {
 	// zoom delta
 	float del = (float)mouseEvent.GetWheelRotation() / (float)mouseEvent.GetWheelDelta();
 
@@ -317,20 +357,20 @@ void Tool::State::PanState::HandleMouseWheel(Tool* pTool, wxMouseEvent& mouseEve
 	pTool->mpCamera->SetViewPosition(viewPosNew);
 }
 //  key
-void Tool::State::PanState::HandleKeyboardKeyPressed(Tool* pTool, wxKeyEvent& keyEvent) {
+void ToolState::PanState::HandleKeyboardKeyPressed(Tool* pTool, wxKeyEvent& keyEvent) {
 	
 }
-void Tool::State::PanState::HandleKeyboardKeyReleased(Tool* pTool, wxKeyEvent& keyEvent) {
+void ToolState::PanState::HandleKeyboardKeyReleased(Tool* pTool, wxKeyEvent& keyEvent) {
 
 }
 //  render
-void Tool::State::PanState::Render(Tool* pTool, wxDC& dc) {}
+void ToolState::PanState::Render(Tool* pTool, wxDC& dc) {}
 //  definition
-Tool::State::PanState Tool::State::Pan;
+ToolState::PanState ToolState::Pan;
 
-// MoveState (REDO/UNDO-ABLE?)
+// MoveState
 //  mouse
-void Tool::State::MoveState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mouseEvent) {
+void ToolState::MoveState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mouseEvent) {
 	// project viewport coords -> view coords, capture those
 	vec2f inPos{ mouseEvent.GetX(), mouseEvent.GetY() };
 	mMouseDownPos = pTool->mpCamera->ViewTransform(inPos);
@@ -339,46 +379,65 @@ void Tool::State::MoveState::HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& m
 	// global node radius
 	float gRad = 8.0f * pTool->mpCamera->GetViewWidth() / pTool->mpCamera->GetClientWidth();
 
-	// find the node
-	for (auto& pNode : pTool->mpNetwork->GetNodes()) {
+	// make sure user clicks on a single one  of the selected nodes
+	for (auto& pNode : pTool->mpSelectedNodes) {
 		if (intervalContains(pNode->GetX() - gRad, pNode->GetX() + gRad, mMouseDownPos.x)
 			& intervalContains(pNode->GetY() - gRad, pNode->GetY() + gRad, mMouseDownPos.y)) {
-			mpNode = pNode; break;
+			mMoving = true;
 		}
 	}
 
-	// capture original position
-	mOldPos.x = mpNode->GetX(); mOldPos.y = mpNode->GetY();
-	mMoving = true;
+	// save current positions of selected  nodes
+	if (mMoving) {
+		mOldPos.clear();
+		for (auto& pNode : pTool->mpSelectedNodes) {
+			mOldPos.push_back(pNode->GetPosition());
+		}
+	}
 }
-void Tool::State::MoveState::HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent) {
-	// project viewport coords -> view coords, capture those
-	vec2f inPos{ mouseEvent.GetX(), mouseEvent.GetY() };
-	mMouseUpPos = pTool->mpCamera->ViewTransform(inPos);
-
-	// reset node's position
-	mpNode->SetX(mOldPos.x); mpNode->SetY(mOldPos.y);
-
-	// move command
-	pTool->mpNetwork->MoveNodeCmd(mpNode, mMouseUpPos);
-	
-	mMoving = false;
-}
-void Tool::State::MoveState::HandleMouseRightPressed(Tool* pTool, wxMouseEvent& mouseEvent) {}
-void Tool::State::MoveState::HandleMouseRightReleased(Tool* pTool, wxMouseEvent& mouseEvent) {}
-void Tool::State::MoveState::HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEvent) {
+void ToolState::MoveState::HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent) {
 	if (mMoving) {
 		// project viewport coords -> view coords, capture those
 		vec2f inPos{ mouseEvent.GetX(), mouseEvent.GetY() };
 		mMouseUpPos = pTool->mpCamera->ViewTransform(inPos);
 
-		// update the node's position
-		mpNode->SetX(mMouseUpPos.x); mpNode->SetY(mMouseUpPos.y);
+		// compute transformation
+		vec2f trans{ mMouseUpPos.x - mMouseDownPos.x, mMouseUpPos.y - mMouseDownPos.y };
+
+		// reset node's position
+		for (std::size_t i = 0; i < pTool->mpSelectedNodes.size(); ++i) {
+			pTool->mpSelectedNodes.at(i)->SetPosition(mOldPos.at(i));
+		}
+
+		// move command
+		pTool->mpNetwork->MoveNodesCmd(pTool->mpSelectedNodes, trans);
+
+		mMoving = false;
 	}
 }
-void Tool::State::MoveState::HandleMouseWheel(Tool* pTool, wxMouseEvent& mouseEvent) {}
+void ToolState::MoveState::HandleMouseMiddlePressed(Tool* pTool, wxMouseEvent& mouseEvent) {}
+void ToolState::MoveState::HandleMouseMiddleReleased(Tool* pTool, wxMouseEvent& mouseEvent) {}
+void ToolState::MoveState::HandleMouseRightPressed(Tool* pTool, wxMouseEvent& mouseEvent) {}
+void ToolState::MoveState::HandleMouseRightReleased(Tool* pTool, wxMouseEvent& mouseEvent) {}
+void ToolState::MoveState::HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEvent) {
+	if (mMoving) {
+		// project viewport coords -> view coords, capture those
+		vec2f inPos{ mouseEvent.GetX(), mouseEvent.GetY() };
+		mMouseUpPos = pTool->mpCamera->ViewTransform(inPos);
+
+		// compute current transformation
+		vec2f trans{ mMouseUpPos.x - mMouseDownPos.x, mMouseUpPos.y - mMouseDownPos.y };
+
+		// update the node's position
+		for (std::size_t i = 0; i < pTool->mpSelectedNodes.size(); ++i) {
+			pTool->mpSelectedNodes.at(i)->SetX(mOldPos.at(i).x + trans.x); 
+			pTool->mpSelectedNodes.at(i)->SetY(mOldPos.at(i).y + trans.y); 
+		}
+	}
+}
+void ToolState::MoveState::HandleMouseWheel(Tool* pTool, wxMouseEvent& mouseEvent) {}
 //  key
-void Tool::State::MoveState::HandleKeyboardKeyPressed(Tool* pTool, wxKeyEvent& keyEvent) {
+void ToolState::MoveState::HandleKeyboardKeyPressed(Tool* pTool, wxKeyEvent& keyEvent) {
 	wxChar uc = keyEvent.GetUnicodeKey();
 
 	// otherwise
@@ -409,7 +468,7 @@ void Tool::State::MoveState::HandleKeyboardKeyPressed(Tool* pTool, wxKeyEvent& k
 		}
 	}
 }
-void Tool::State::MoveState::HandleKeyboardKeyReleased(Tool* pTool, wxKeyEvent& keyEvent) {
+void ToolState::MoveState::HandleKeyboardKeyReleased(Tool* pTool, wxKeyEvent& keyEvent) {
 	wxChar uc = keyEvent.GetUnicodeKey();
 	if (uc != WXK_NONE) {
 		// normal character, including control characters in the 1...31 range
@@ -423,74 +482,104 @@ void Tool::State::MoveState::HandleKeyboardKeyReleased(Tool* pTool, wxKeyEvent& 
 		}
 	}
 }
+
 //  render
-void Tool::State::MoveState::Render(Tool* pTool, wxDC& dc) {}
+void ToolState::MoveState::Render(Tool* pTool, wxDC& dc) {}
 //  definition
-Tool::State::MoveState Tool::State::Move;
+ToolState::MoveState ToolState::Move;
 
 // tool 
 Tool::Tool(std::shared_ptr<Network> pNetwork, std::shared_ptr<Camera> pCamera) 
 	: mpNetwork(pNetwork), mpCamera(pCamera)
 {
 	// SelectState is default
-	mpState = &State::Select;
+	//mpState = &State::Select;
+	mpStates.push(&ToolState::Select);
 }
 
 // state transition interface
-void Tool::Select() {
-	mpState = &State::Select;
+void Tool::PushState(ToolState* newState) {
+	mpStates.push(newState);
 }
-void Tool::Edit() {
-	mpState = &State::Edit;
-}
-void Tool::Pan() {
-	mpState = &State::Pan;
-}
-void Tool::Move() {
-	mpState = &State::Move;
+void Tool::PopState() {
+	mpStates.pop();
 }
 
-// forwards to state methods for input handling
-//  mouse
-void Tool::HandleMouseLeftPressed(wxMouseEvent& mouseEvent)
+// this is where the stack of states are managed.
+//  if an event of mpState->GetPopEventType() is 
+//  observed, the corresponding input handler is 
+//  called followed by popping the state stack.
+void Tool::HandleMouse(wxMouseEvent& mouseEvent) 
 {
-	mpState->HandleMouseLeftPressed(this, mouseEvent);
+	if (!mpStates.empty()) {
+		wxEventType eventType = mouseEvent.GetEventType();
+		if (eventType == wxEVT_LEFT_DOWN) {
+			mpStates.top()->HandleMouseLeftPressed(this, mouseEvent);
+			if (mpStates.top()->GetPopEventType() == wxEVT_LEFT_DOWN) {
+				PopState();
+			}
+		}
+		else if (eventType == wxEVT_LEFT_UP) {
+			mpStates.top()->HandleMouseLeftReleased(this, mouseEvent);
+			if (mpStates.top()->GetPopEventType() == wxEVT_LEFT_UP) {
+				PopState();
+			}
+		}
+		else if (eventType == wxEVT_MIDDLE_DOWN) {
+			mpStates.top()->HandleMouseMiddlePressed(this, mouseEvent);
+			if (mpStates.top()->GetPopEventType() == wxEVT_MIDDLE_DOWN) {
+				PopState();
+			}
+		}
+		else if (eventType == wxEVT_MIDDLE_UP) {
+			mpStates.top()->HandleMouseMiddleReleased(this, mouseEvent);
+			if (mpStates.top()->GetPopEventType() == wxEVT_MIDDLE_UP) {
+				PopState();
+			}
+		}
+		else if (eventType == wxEVT_RIGHT_DOWN) {
+			mpStates.top()->HandleMouseRightPressed(this, mouseEvent);
+			if (mpStates.top()->GetPopEventType() == wxEVT_RIGHT_DOWN) {
+				PopState();
+			}
+		}
+		else if (eventType == wxEVT_RIGHT_UP) {
+			mpStates.top()->HandleMouseRightReleased(this, mouseEvent);
+			if (mpStates.top()->GetPopEventType() == wxEVT_RIGHT_UP) {
+				PopState();
+			}
+		}
+		else if (eventType == wxEVT_MOTION) {
+			mpStates.top()->HandleMouseMotion(this, mouseEvent);
+			if (mpStates.top()->GetPopEventType() == wxEVT_MOTION) {
+				PopState();
+			}
+		}
+		else if (eventType == wxEVT_MOUSEWHEEL) {
+			mpStates.top()->HandleMouseWheel(this, mouseEvent);
+			if (mpStates.top()->GetPopEventType() == wxEVT_MOUSEWHEEL) {
+				PopState();
+			}
+		}
+	}
 }
-void Tool::HandleMouseLeftReleased(wxMouseEvent& mouseEvent)
-{
-	mpState->HandleMouseLeftReleased(this, mouseEvent);
+void Tool::HandleKeyboardKeyPressed(wxKeyEvent& keyEvent) {
+	mpStates.top()->HandleKeyboardKeyPressed(this, keyEvent);
 }
-void Tool::HandleMouseRightPressed(wxMouseEvent& mouseEvent)
-{
-	mpState->HandleMouseRightPressed(this, mouseEvent);
+void Tool::HandleKeyboardKeyReleased(wxKeyEvent& keyEvent) {
+	mpStates.top()->HandleKeyboardKeyReleased(this, keyEvent);
 }
-void Tool::HandleMouseRightReleased(wxMouseEvent& mouseEvent)
-{
-	mpState->HandleMouseRightReleased(this, mouseEvent);
-}
-void Tool::HandleMouseMotion(wxMouseEvent& mouseEvent) {
-	mpState->HandleMouseMotion(this, mouseEvent);
-}
-void Tool::HandleMouseWheel(wxMouseEvent& mouseEvent) {
-	mpState->HandleMouseWheel(this, mouseEvent);
-}
-void Tool::HandleKeyboardKeyPressed(wxKeyEvent& keyEvent)
-{
-	mpState->HandleKeyboardKeyPressed(this, keyEvent);
-}
-void Tool::HandleKeyboardKeyReleased(wxKeyEvent& keyEvent)
-{
-	mpState->HandleKeyboardKeyReleased(this, keyEvent);
-}
+
 void Tool::Render(wxDC& dc) {
 	// always draw selected wires and nodes
 	RenderSelected(dc);
 	// toolstate-specific rendering
-	mpState->Render(this, dc);
+	mpStates.top()->Render(this, dc);
 }
 
 void Tool::RenderSelected(wxDC& dc) {
-	// always draw the selected nodes
+
+	// draw selected nodes
 	for (auto& pNode : mpSelectedNodes) {
 		// get positions of nodes select region in viewport space
 		vec2f inPos{ pNode->GetX(), pNode->GetY() };

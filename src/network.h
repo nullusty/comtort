@@ -74,6 +74,7 @@ public:
 	void RemoveNodesCmd(std::vector<std::shared_ptr<Node>> pNodes);
 	// move node
 	void MoveNodeCmd(std::shared_ptr<Node> pNode, vec2f newPosition);
+	void MoveNodesCmd(std::vector<std::shared_ptr<Node>> pNodes, vec2f trans);
 
 	// Wire interface
 	//  get wires

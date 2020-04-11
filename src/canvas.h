@@ -44,12 +44,7 @@ public:
 	void DrawNetwork(wxDC& dc);
 	void DrawTool(wxDC& dc);
 
-	void HandleMouseLeftPressed(wxMouseEvent& evt);
-	void HandleMouseLeftReleased(wxMouseEvent& evt);
-	void HandleMouseRightPressed(wxMouseEvent& evt);
-	void HandleMouseRightReleased(wxMouseEvent& evt);
-	void HandleMouseMotion(wxMouseEvent& evt);
-	void HandleMouseWheel(wxMouseEvent& evt);
+	void HandleMouse(wxMouseEvent& evt);
 	void HandleKeyDown(wxKeyEvent& evt);
 	void HandleKeyUp(wxKeyEvent& evt);
 
@@ -59,6 +54,8 @@ public:
 	void HandleEditButton(wxCommandEvent& evt);
 	void HandlePanButton(wxCommandEvent& evt);
 	void HandleMoveButton(wxCommandEvent& evt);
+
+	wxDECLARE_EVENT_TABLE();
 };
 
 #define CANVAS_H

@@ -101,34 +101,8 @@ void Canvas::DrawTool(wxDC& dc) {
 	mpTool->Render(dc);
 }
 
-void Canvas::HandleMouseLeftPressed(wxMouseEvent& evt) {
-	mpTool->HandleMouseLeftPressed(evt);
-	PaintNow();
-}
-
-void Canvas::HandleMouseLeftReleased(wxMouseEvent& evt) {
-	mpTool->HandleMouseLeftReleased(evt);
-	PaintNow();
-}
-
-void Canvas::HandleMouseRightPressed(wxMouseEvent& evt) {
-	mpTool->HandleMouseRightPressed(evt);
-	PaintNow();
-}
-
-void Canvas::HandleMouseRightReleased(wxMouseEvent& evt) {
-	mpTool->HandleMouseRightReleased(evt);
-	PaintNow();
-}
-
-void Canvas::HandleMouseMotion(wxMouseEvent& evt) {
-	mpTool->HandleMouseMotion(evt);
-
-	PaintNow();
-}
-
-void Canvas::HandleMouseWheel(wxMouseEvent& evt) {
-	mpTool->HandleMouseWheel(evt);
+void Canvas::HandleMouse(wxMouseEvent& evt) {
+	mpTool->HandleMouse(evt);
 	PaintNow();
 }
 
@@ -143,25 +117,33 @@ void Canvas::HandleKeyUp(wxKeyEvent& evt) {
 }
 
 void Canvas::HandleSelectButton(wxCommandEvent& evt) {
-	mpTool->Select();
+	mpTool->PopState();
+	mpTool->PushState(&ToolState::Select);
 	SetFocus();
 }
 
 void Canvas::HandleEditButton(wxCommandEvent& evt) {
-	mpTool->Edit();
+	mpTool->PopState();
+	mpTool->PushState(&ToolState::Edit);
 	SetFocus();
 }
 
 void Canvas::HandlePanButton(wxCommandEvent& evt) {
-	mpTool->Pan();
+	mpTool->PopState();
+	mpTool->PushState(&ToolState::Pan);
 	SetFocus();
 }
 
 void Canvas::HandleMoveButton(wxCommandEvent& evt) {
-	mpTool->Move();
+	mpTool->PopState();
+	mpTool->PushState(&ToolState::Move);
 	SetFocus();
 }
 
 void Canvas::HandleMouseEnter(wxMouseEvent& evt) {
 	SetFocus();
 }
+
+wxBEGIN_EVENT_TABLE(Canvas, wxPanel)
+	EVT_MOUSE_EVENTS(Canvas::HandleMouse)
+wxEND_EVENT_TABLE()

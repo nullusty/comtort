@@ -1,49 +1,54 @@
 #ifndef TOOL_H
 
-#include <memory>		// for unique_ptr and shared_ptr
-
+// wxWidget headers
 #include "wx/event.h"	// for wxMouseEvent and wxKeyEvent
 #include "wx/dc.h"		// for wxDC
 
+// graph headers
 #include "network.h"	// for Network
 #include "camera.h"		// for Camera
 
+// C++ headers
+#include <memory>		// for std::unique_ptr and std::shared_ptr
+#include <stack>
+#include <tuple>
+
+class ToolState;
+
 class Tool {
 	// internal state structure
-	class State;
-	State* mpState{ nullptr };
+	//State* mpState{ nullptr };	// current state
+	// stack of (state, popEvent) tuples
+	//std::stack<std::tuple<State*, wxEventType>> mpStates{};
+	//  -> could just give each state a popEvent field...
+	friend class ToolState;
+	std::stack<ToolState*> mpStates{};
 
 	// objects to manipulate
 	std::shared_ptr<Network> mpNetwork{ nullptr };
 	std::shared_ptr<Camera> mpCamera{ nullptr };
 
-	// selected objects
+	// selected entities
 	std::vector<std::shared_ptr<Node>> mpSelectedNodes{};
 	std::vector<std::shared_ptr<Wire>> mpSelectedWires{};
+	bool mDrawSelected{ true };
 
 public:
 	Tool(std::shared_ptr<Network> pNetwork,
 		 std::shared_ptr<Camera> pCamera);
 
 	// state transition interface
-	void Select();
-	void Edit();
-	void Pan();
-	void Move();
+	// pushdown
+	void PushState(ToolState* state);
+	void PopState();
 
-	// forwards to state methods for input handling
-	//  mouse
-	void HandleMouseLeftPressed(wxMouseEvent& mouseEvent);
-	void HandleMouseLeftReleased(wxMouseEvent& mouseEvent);
-	void HandleMouseRightPressed(wxMouseEvent& mouseEvent);
-	void HandleMouseRightReleased(wxMouseEvent& mouseEvent);
-	void HandleMouseMotion(wxMouseEvent& mouseEvent);
-	void HandleMouseWheel(wxMouseEvent& mouseEvent);
+	// handlers
+	void HandleMouse(wxMouseEvent& mouseEvent);
+
 	//  key
 	void HandleKeyboardKeyPressed(wxKeyEvent& keyEvent);
 	void HandleKeyboardKeyReleased(wxKeyEvent& keyEvent);
-
-	// forward to state method for rendering
+	// tool-specific rendering
 	void Render(wxDC& dc);
 
 	// selected entities rendering
@@ -51,7 +56,9 @@ public:
 };
 
 // Abstract Tool State interface
-class Tool::State {
+class ToolState {
+	wxEventType mPopEventType{ wxEVT_NULL };
+
 public:
 	// static state declarations
 	class SelectState;
@@ -64,11 +71,15 @@ public:
 	static PanState Pan;
 	static MoveState Move;
 
-	~State() {}
+	virtual ~ToolState() {}
+
+	// forwards from tool object
 	// input handlers
 	//  mouse
 	virtual void HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mouseEvent) = 0;
 	virtual void HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent) = 0;
+	virtual void HandleMouseMiddlePressed(Tool* pTool, wxMouseEvent& mouseEvent) = 0;
+	virtual void HandleMouseMiddleReleased(Tool* pTool, wxMouseEvent& mouseEvent) = 0;
 	virtual void HandleMouseRightPressed(Tool* pTool, wxMouseEvent& mouseEvent) = 0;
 	virtual void HandleMouseRightReleased(Tool* pTool, wxMouseEvent& mouseEvent) = 0;
 	virtual void HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEvent) = 0;
@@ -76,18 +87,16 @@ public:
 	//  key
 	virtual void HandleKeyboardKeyPressed(Tool* pTool, wxKeyEvent& keyEvent) = 0;
 	virtual void HandleKeyboardKeyReleased(Tool* pTool, wxKeyEvent& keyEvent) = 0;
-
 	// rendering
 	virtual void Render(Tool* pTool, wxDC& dc) = 0;
+
+	// set PopEventType
+	void SetPopEventType(wxEventType eventType);
+	wxEventType GetPopEventType() const;
 };
 
 // SelectState
-class Tool::State::SelectState : public Tool::State {
-	// selected nodes
-	std::vector<std::shared_ptr<Node>> mpNodes{};
-	// selected wires
-	std::vector<std::shared_ptr<Wire>> mpWires{};
-
+class ToolState::SelectState : public ToolState {
 	// captured mouse positions
 	vec2f mMouseDownPos{ 0.0f, 0.0f };
 	vec2f mMouseUpPos{ 0.0f, 0.0f };
@@ -103,6 +112,8 @@ public:
 	//  mouse
 	virtual void HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent);
+	virtual void HandleMouseMiddlePressed(Tool* pTool, wxMouseEvent& mouseEvent);
+	virtual void HandleMouseMiddleReleased(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseRightPressed(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseRightReleased(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEvent);
@@ -115,7 +126,8 @@ public:
 	virtual void Render(Tool* pTool, wxDC& dc);
 };
 
-class Tool::State::EditState : public Tool::State {
+// EditState
+class ToolState::EditState : public ToolState {
 	// captured mouse positions
 	vec2f mMouseDownPos{ 0.0f, 0.0f };
 	vec2f mMouseUpPos{ 0.0f, 0.0f };
@@ -129,6 +141,8 @@ public:
 	//  mouse
 	virtual void HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent);
+	virtual void HandleMouseMiddlePressed(Tool* pTool, wxMouseEvent& mouseEvent);
+	virtual void HandleMouseMiddleReleased(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseRightPressed(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseRightReleased(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEvent);
@@ -140,7 +154,8 @@ public:
 	virtual void Render(Tool* pTool, wxDC& dc);
 };
 
-class Tool::State::PanState : public Tool::State {
+// PanState
+class ToolState::PanState : public ToolState {
 	vec2f mMouseDownPos{ 0.0f, 0.0f };
 	vec2f mMouseUpPos{ 0.0f, 0.0f };
 
@@ -148,6 +163,8 @@ class Tool::State::PanState : public Tool::State {
 public:
 	virtual void HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent);
+	virtual void HandleMouseMiddlePressed(Tool* pTool, wxMouseEvent& mouseEvent);
+	virtual void HandleMouseMiddleReleased(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseRightPressed(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseRightReleased(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEvent);
@@ -159,18 +176,21 @@ public:
 	virtual void Render(Tool* pTool, wxDC& dc);
 };
 
-class Tool::State::MoveState : public Tool::State {
+// MoveState
+class ToolState::MoveState : public ToolState {
 	vec2f mMouseDownPos{ 0.0f, 0.0f };
 	vec2f mMouseUpPos{ 0.0f, 0.0f };
 
-	std::shared_ptr<Node> mpNode{ nullptr };
-	vec2f mOldPos{ 0.0f, 0.0f };
+	// copy of selected nodes positions
+	std::vector<vec2f> mOldPos{};
 
-	bool mCtrl{ false };
 	bool mMoving{ false };
+	bool mCtrl{ false };
 public:
 	virtual void HandleMouseLeftPressed(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseLeftReleased(Tool* pTool, wxMouseEvent& mouseEvent);
+	virtual void HandleMouseMiddlePressed(Tool* pTool, wxMouseEvent& mouseEvent);
+	virtual void HandleMouseMiddleReleased(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseRightPressed(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseRightReleased(Tool* pTool, wxMouseEvent& mouseEvent);
 	virtual void HandleMouseMotion(Tool* pTool, wxMouseEvent& mouseEvent);

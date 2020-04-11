@@ -210,6 +210,8 @@ public:
 	}
 };
 
+
+
 class AddWireCommand : public Network::Command {
 	// to and from
 	std::shared_ptr<Node> mTo;
@@ -233,17 +235,17 @@ class MoveNodeCommand : public Network::Command {
 	std::shared_ptr<Node> mpNode;
 	// original position
 	vec2f mPosOld;
-	// new position
-	vec2f mPosNew;
+	// translation
+	vec2f mTrans;
 
 public:
-	MoveNodeCommand(std::shared_ptr<Node> pNode, vec2f newPosition)
-		: mpNode(pNode), mPosOld({ pNode->GetX(), pNode->GetY() }),
-		mPosNew(newPosition) {}
+	MoveNodeCommand(std::shared_ptr<Node> pNode, vec2f trans)
+		: mpNode(pNode), mPosOld(pNode->GetPosition()), mTrans(trans)
+	{}
 
 	virtual void execute(Network* pNetwork) {
-		mpNode->SetX(mPosNew.x);
-		mpNode->SetY(mPosNew.y);
+		mpNode->SetX(mPosOld.x + mTrans.x);
+		mpNode->SetY(mPosOld.y + mTrans.y);
 	}
 
 	virtual void undo(Network* pNetwork) {
@@ -252,13 +254,49 @@ public:
 	}
 };
 
-void Network::MoveNodeCmd(std::shared_ptr<Node> pNode, vec2f newPosition) {
+class MoveNodesCommand : public Network::Command {
+	std::vector<std::unique_ptr<MoveNodeCommand>> mpCmds{};
+
+public:
+	MoveNodesCommand(std::vector<std::shared_ptr<Node>> pNodes, vec2f trans) {
+		for (auto& pNode : pNodes) {
+			mpCmds.push_back(std::make_unique<MoveNodeCommand>(pNode, trans));
+		}
+	}
+
+	virtual void execute(Network* pNetwork) {
+		for (auto& pCmd : mpCmds) {
+			pCmd->execute(pNetwork);
+		}
+	}
+
+	virtual void undo(Network* pNetwork) {
+		for (auto& pCmd : mpCmds) {
+			pCmd->undo(pNetwork);
+		}
+	}
+};
+
+void Network::MoveNodeCmd(std::shared_ptr<Node> pNode, vec2f trans) {
 	// user is overwriting the future, delete any future commands
 	if (mCommandPos < mpCommands.size()) mpCommands.resize(mCommandPos);
 
 	// add a new command to the list
 	mpCommands.push_back(
-		std::make_unique<MoveNodeCommand>(pNode, newPosition));
+		std::make_unique<MoveNodeCommand>(pNode, trans));
+	// execute
+	mpCommands.at(mCommandPos)->execute(this);
+	// iterate forwards
+	++mCommandPos;
+}
+
+void Network::MoveNodesCmd(std::vector<std::shared_ptr<Node>> pNodes, vec2f trans) {
+	// user is overwriting the future, delete any future commands
+	if (mCommandPos < mpCommands.size()) mpCommands.resize(mCommandPos);
+
+	// add a new command to the list
+	mpCommands.push_back(
+		std::make_unique<MoveNodesCommand>(pNodes, trans));
 	// execute
 	mpCommands.at(mCommandPos)->execute(this);
 	// iterate forwards

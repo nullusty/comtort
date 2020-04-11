@@ -11,20 +11,33 @@
 Node::Node() {}
 //  positional
 Node::Node(float xPosition, float yPosition)
-	: mPosX(xPosition), mPosY(yPosition) {}
+{
+	mPos.x = xPosition;
+	mPos.y = yPosition;
+}
+//  positional (vec2f)
+Node::Node(vec2f position)
+	: mPos(position) {}
 
 // positional data getters/setters
 float Node::GetX() const { 
-	return mPosX; 
+	return mPos.x; 
 }
 void Node::SetX(float xPosition) {
-	mPosX = xPosition;
+	mPos.x = xPosition;
 }
 float Node::GetY() const {
-	return mPosY;
+	return mPos.y;
 }
 void Node::SetY(float yPosition) {
-	mPosY = yPosition;
+	mPos.y = yPosition;
+}
+// vec2f
+vec2f Node::GetPosition() const {
+	return mPos;
+}
+void Node::SetPosition(vec2f position) {
+	mPos = position;
 }
 
 // label getters/setters
